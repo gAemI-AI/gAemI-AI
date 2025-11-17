@@ -43,7 +43,7 @@ services:
   #   depends_on:
   #     - db
 
-# (나중에 front-pjt, data-pjt 서비스가 여기에 추가)
+# (나중에 front-pjt, data-pjt 서비스 여기에 추가)
 # Docker가 관리할 볼륨 정의
 volumes:
   postgres_data:
