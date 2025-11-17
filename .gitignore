@@ -1,0 +1,54 @@
+# .gitignore (Project Root: gaemi-project)
+
+### 1. General / OS / IDE ###
+# Operating System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# IDE config files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Log files
+*.log
+
+
+### 2. Python / Django (backend-pjt) ###
+# Byte-compiled files
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual Environments (if created locally)
+venv/
+env/
+*.env
+
+# Django specific
+*.sqlite3
+/media/
+/static/
+
+# Environment variables
+.env
+
+
+### 3. Node.js / Vue.js (front-pjt) ###
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+.output/
+
+# Local environment variables
+.env.local
+.env.*.local
+
+# NPM/Yarn log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
