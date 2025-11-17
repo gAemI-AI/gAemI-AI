@@ -1,0 +1,49 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # 네트워크 내에서 'db'로 호출 가능
+  # 1. DB 서비스
+  db:
+    image: postgres:15
+    container_name: gaemi_db
+    restart: always
+
+    environment:
+      POSTGRES_USER: gaemi
+      POSTGRES_PASSWORD: gaemigaemi11 
+      POSTGRES_DB: gaemi_ai
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      # (영속성) 컨테이너 삭제되어도 데이터를 볼륨에 안전하게 보관
+      - postgres_data:/var/lib/postgresql/data
+      # (초기화) 컨테이너가 처음 생성될 때, 자동으로 .sql 파일 실행
+      - ./config/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      # 현재 폴더의 'data' 디렉토리 -> 컨테이너 내부 '/docker-data' 디렉토리로 연결
+      - ./config/postgres/data:/docker-data
+
+  # 2. 백엔드 서비스
+  # backend:
+  #   build:
+  #     context: ./backend-pjt
+  #   container_name: gaemi_backend
+  #   ports:
+  #     - "8000:8000"
+  #   volumes:
+  #     # 🌟 (주소 변경!) ../backend-pjt 였던 경로를 수정합니다.
+  #     - ./backend-pjt:/app
+  #   environment:
+  #     - POSTGRES_DB=gaemi_ai
+  #     - POSTGRES_USER=gaemi
+  #     - POSTGRES_PASSWORD=gaemigaemi11
+  #     - POSTGRES_HOST=db
+  #   depends_on:
+  #     - db
+
+# (나중에 front-pjt, data-pjt 서비스가 여기에 추가)
+# Docker가 관리할 볼륨 정의
+volumes:
+  postgres_data:
