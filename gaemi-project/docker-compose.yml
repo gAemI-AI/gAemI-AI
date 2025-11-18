@@ -26,21 +26,21 @@ services:
       - ./config/postgres/data:/docker-data
 
   # 2. 백엔드 서비스
-  # backend:
-  #   build:
-  #     context: ./backend-pjt
-  #   container_name: gaemi_backend
-  #   ports:
-  #     - "8000:8000"
-  #   volumes:
-  #     - ./backend-pjt:/app
-  #   environment:
-  #     - POSTGRES_DB=gaemi_ai
-  #     - POSTGRES_USER=gaemi
-  #     - POSTGRES_PASSWORD=gaemigaemi11
-  #     - POSTGRES_HOST=db
-  #   depends_on:
-  #     - db
+  backend:
+    build:
+      context: ./backend-pjt
+    container_name: gaemi_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend-pjt:/app
+    environment:
+      - POSTGRES_DB=gaemi_ai
+      - POSTGRES_USER=gaemi
+      - POSTGRES_PASSWORD=gaemigaemi11
+      - POSTGRES_HOST=db
+    depends_on:
+      - db
 
 # (나중에 front-pjt, data-pjt 서비스 여기에 추가)
 # Docker가 관리할 볼륨 정의
