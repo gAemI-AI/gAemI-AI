@@ -33,7 +33,6 @@ services:
   #   ports:
   #     - "8000:8000"
   #   volumes:
-  #     # 🌟 (주소 변경!) ../backend-pjt 였던 경로를 수정합니다.
   #     - ./backend-pjt:/app
   #   environment:
   #     - POSTGRES_DB=gaemi_ai
