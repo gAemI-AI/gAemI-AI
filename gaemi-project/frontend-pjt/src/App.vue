@@ -1,4 +1,38 @@
+<template>
+  <MainLayout>
+    <router-view />
+
+    <!-- 우측 하단 알림 토스트 (예시 1개) -->
+    <AlertToast
+      v-if="showSampleToast"
+      :type="'warning'"
+      title="실시간 시장 급등 알림"
+      message="삼성전자에 중요한 속보가 발생했습니다. 상세 내용은 AI 뉴스 분석 탭에서 확인하세요."
+    />
+
+    <!-- 어디서나 열리는 AI 챗봇 -->
+    <AiChatWidget />
+  </MainLayout>
+</template>
+
 <script setup>
+import { ref, onMounted } from 'vue';
+import MainLayout from './components/layout/MainLayout.vue';
+import AiChatWidget from './components/chat/AiChatWidget.vue';
+import AlertToast from './components/alerts/AlertToast.vue';
+
+const showSampleToast = ref(false);
+
+onMounted(() => {
+  // 예시로 2초 뒤에 알림 한 번 띄우기
+  setTimeout(() => {
+    showSampleToast.value = true;
+    setTimeout(() => (showSampleToast.value = false), 5000);
+  }, 2000);
+});
+</script>
+
+<!-- <script setup>
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
 </script>
@@ -82,4 +116,4 @@ nav a:first-of-type {
     margin-top: 1rem;
   }
 }
-</style>
+</style> -->
