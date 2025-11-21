@@ -41,11 +41,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
+
     # 소셜 로그인 관련 추가
     'dj_rest_auth',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    
     # (사용할 소셜 제공자 - 나중에 카카오 개발자 센터 등에서 키 받아야 함)
     'allauth.socialaccount.providers.kakao', 
     'allauth.socialaccount.providers.google',
@@ -164,3 +167,10 @@ REST_FRAMEWORK = {
 REST_USE_JWT = True
 JWT_AUTH_COOKIE = 'gaemi-auth'
 JWT_AUTH_REFRESH_COOKIE = 'gaemi-refresh'
+
+# 이메일 설정 (개발중: 발송 대신 터미널에 로그)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# 이메일 인증을 필수로 할지 여부 (지금은 'optional' 또는 'none' 추천)
+ACCOUNT_EMAIL_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = 'none' # 이메일 인증 안 함 (가입 즉시 로그인 가능)
