@@ -41,8 +41,24 @@ services:
       - POSTGRES_HOST=db
     depends_on:
       - db
+  
+  # 3. 프론트엔드 서비스
+  frontend:
+    build:
+      context: ./frontend-pjt
+    container_name: gaemi_front
+    ports:
+      - "5173:5173"   # Vite 기본 포트
+    volumes:
+      - ./frontend-pjt:/app
+      - /app/node_modules # 호스트의 node_modules 동기화 방지
+    working_dir: /app
+    command: ["npm", "run", "dev", "--", "--host"] 
+    depends_on:
+      - backend
 
-# (나중에 front-pjt, data-pjt 서비스 여기에 추가)
+
+# (나중에 data-pjt 서비스 여기에 추가)
 # Docker가 관리할 볼륨 정의
 volumes:
   postgres_data:
