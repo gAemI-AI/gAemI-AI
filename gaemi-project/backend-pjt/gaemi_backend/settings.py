@@ -34,13 +34,29 @@ ALLOWED_HOSTS = ['*'] # 테스트 or 개발 목적으로 일시적으로 설정 
 INSTALLED_APPS = [
     'rest_framework', # Django REST framework
     'corsheaders',  # CORS headers (프론트와 통합을 고려할 때 추가)
+    'rest_framework.authtoken',  # dj-rest-auth 사용 시 필요
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # 소셜 로그인 관련 추가
+    'dj_rest_auth',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    # (사용할 소셜 제공자 - 나중에 카카오 개발자 센터 등에서 키 받아야 함)
+    'allauth.socialaccount.providers.kakao', 
+    'allauth.socialaccount.providers.google',
+
+    # My apps
+    'users',
+    'stocks',
+    'watchlist',
+    'notifications'
 ]
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # CORS 미들웨어 추가
@@ -51,6 +67,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
+
 ]
 
 ROOT_URLCONF = 'gaemi_backend.urls'
@@ -128,3 +146,21 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# 🌟 파일 맨 아래에 소셜 로그인 필수 설정 추가
+SITE_ID = 1  # allauth가 사용하는 사이트 식별자
+
+# 인증 모델 설정 (이미 되어있겠지만 확인)
+AUTH_USER_MODEL = 'users.User'
+
+# DRF 인증 설정 (JWT 사용)
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
+    ),
+}
+
+# JWT 설정
+REST_USE_JWT = True
+JWT_AUTH_COOKIE = 'gaemi-auth'
+JWT_AUTH_REFRESH_COOKIE = 'gaemi-refresh'
