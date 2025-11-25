@@ -56,9 +56,49 @@ services:
     command: ["npm", "run", "dev", "--", "--host"] 
     depends_on:
       - backend
+  
+  # 4. zookeeper (Kafka 관리자)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: gaemi_zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      # Confluent는 데이터 경로가 다릅니다 (/var/lib/zookeeper/data)
+      - zookeeper_data:/var/lib/zookeeper/data
 
+  # 5. kafka 
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: gaemi_kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      
+      # [리스너 설정] 내부용(kafka:29092)과 외부용(localhost:9092)을 분리합니다.
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      
+      # [필수] 싱글 노드 모드 설정 (이거 없으면 실행 안 됨)
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    
+    depends_on:
+      - zookeeper
+    volumes:
+      # Confluent 데이터 경로 (/var/lib/kafka/data)
+      - kafka_data:/var/lib/kafka/data
 
 # (나중에 data-pjt 서비스 여기에 추가)
 # Docker가 관리할 볼륨 정의
 volumes:
   postgres_data:
+  zookeeper_data:
+  kafka_data:
