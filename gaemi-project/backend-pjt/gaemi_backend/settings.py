@@ -34,24 +34,14 @@ ALLOWED_HOSTS = ['*'] # 테스트 or 개발 목적으로 일시적으로 설정 
 INSTALLED_APPS = [
     'rest_framework', # Django REST framework
     'corsheaders',  # CORS headers (프론트와 통합을 고려할 때 추가)
-    'rest_framework.authtoken',  # dj-rest-auth 사용 시 필요
+    'rest_framework.authtoken',
+    'rest_framework_simplejwt',  # JWT 토큰 인증
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites',
-
-    # 소셜 로그인 관련 추가
-    'dj_rest_auth',
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    
-    # (사용할 소셜 제공자 - 나중에 카카오 개발자 센터 등에서 키 받아야 함)
-    'allauth.socialaccount.providers.kakao', 
-    'allauth.socialaccount.providers.google',
 
     # My apps
     'users',
@@ -70,8 +60,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
-
 ]
 
 ROOT_URLCONF = 'gaemi_backend.urls'
@@ -150,27 +138,34 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 🌟 파일 맨 아래에 소셜 로그인 필수 설정 추가
-SITE_ID = 1  # allauth가 사용하는 사이트 식별자
-
-# 인증 모델 설정 (이미 되어있겠지만 확인)
+# 🌟 인증 설정
 AUTH_USER_MODEL = 'users.User'
 
 # DRF 인증 설정 (JWT 사용)
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    )
 }
 
 # JWT 설정
-REST_USE_JWT = True
-JWT_AUTH_COOKIE = 'gaemi-auth'
-JWT_AUTH_REFRESH_COOKIE = 'gaemi-refresh'
+from datetime import timedelta
 
-# 이메일 설정 (개발중: 발송 대신 터미널에 로그)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+}
 
-# 이메일 인증을 필수로 할지 여부 (지금은 'optional' 또는 'none' 추천)
-ACCOUNT_EMAIL_REQUIRED = False
-ACCOUNT_EMAIL_VERIFICATION = 'none' # 이메일 인증 안 함 (가입 즉시 로그인 가능)
+# CORS 설정 (프론트 개발 서버 허용)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+]
+CORS_ALLOW_CREDENTIALS = True
