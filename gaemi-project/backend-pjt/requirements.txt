@@ -2,11 +2,7 @@ django
 djangorestframework
 psycopg2-binary
 django-cors-headers
-
-# 소셜 로그인 라이브러리
-django-allauth # 복잡한 로직 처리
-dj-rest-auth #프론트와 로그인 정보 주고 받기 쉽게 API 만들기
-djangorestframework-simplejwt # 로그인 성공시 프론트에게 줄 토근 만들기
+djangorestframework-simplejwt
 
 requests>=2.32.3
 cryptography>=43.0.0

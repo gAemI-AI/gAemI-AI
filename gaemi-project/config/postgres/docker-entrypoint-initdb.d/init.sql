@@ -10,7 +10,7 @@ CREATE TABLE stock_master (
 
 -- 데이터 로드 (현재는 테스트용, 추후 수정 필요)
 COPY stock_master(stock_id, stock_name, market_type)
-FROM '/docker-data/stock_master.csv'
+FROM '/docker-data/stock_master_for_test.csv'
 DELIMITER ','
 CSV HEADER;
 
