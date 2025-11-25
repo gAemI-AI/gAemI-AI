@@ -1,23 +1,35 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import { createRouter, createWebHistory } from 'vue-router';
+import MainLayout from '@/components/layout/MainLayout.vue';
+
+import DashboardPage from '@/pages/DashboardPage.vue';
+import AiNewsPage from '@/pages/AiNewsPage.vue';
+import AlertSettingsPage from '@/pages/AlertSettingsPage.vue';
+import LoginPage from '@/pages/LoginPage.vue';
+
+const routes = [
+  // 🔹 레이아웃 없이 단독으로 뜨는 로그인 페이지
+  {
+    path: '/login',
+    name: 'Login',
+    component: LoginPage,
+  },
+
+  // 🔹 MainLayout을 사용하는 나머지 페이지들
+  {
+    path: '/',
+    component: MainLayout,
+    children: [
+      { path: '', redirect: '/dashboard' },
+      { path: 'dashboard', name: 'Dashboard', component: DashboardPage },
+      { path: 'ai-news', name: 'AiNews', component: AiNewsPage },
+      { path: 'alerts', name: 'Alerts', component: AlertSettingsPage },
+    ],
+  },
+];
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: '/',
-      name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
-    },
-  ],
-})
+  history: createWebHistory(),
+  routes,
+});
 
-export default router
+export default router;
