@@ -1,28 +1,31 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import MainLayout from '@/components/layout/MainLayout.vue';
+import { createRouter, createWebHistory } from "vue-router";
 
-import DashboardPage from '@/pages/DashboardPage.vue';
-import AiNewsPage from '@/pages/AiNewsPage.vue';
-import AlertSettingsPage from '@/pages/AlertSettingsPage.vue';
-import LoginPage from '@/pages/LoginPage.vue';
+import MainLayout from "@/components/layout/MainLayout.vue";
+
+// 단독 페이지
+import WelcomePage from "@/pages/WelcomePage.vue";
+import LoginPage from "@/pages/LoginPage.vue";
+import SignupPage from "@/pages/SignupPage.vue";
+
+// MainLayout 페이지
+import DashboardPage from "@/pages/DashboardPage.vue";
+import AiNewsPage from "@/pages/AiNewsPage.vue";
+import AlertSettingsPage from "@/pages/AlertSettingsPage.vue";
 
 const routes = [
-  // 🔹 레이아웃 없이 단독으로 뜨는 로그인 페이지
-  {
-    path: '/login',
-    name: 'Login',
-    component: LoginPage,
-  },
+  { path: "/", redirect: "/welcome" },
 
-  // 🔹 MainLayout을 사용하는 나머지 페이지들
+  { path: "/welcome", component: WelcomePage },
+  { path: "/login", component: LoginPage },
+  { path: "/signup", component: SignupPage },
+
   {
-    path: '/',
-    component: MainLayout,
+    path: "/app",
+    component: MainLayout, // 여기서만 상단바 렌더링됨
     children: [
-      { path: '', redirect: '/dashboard' },
-      { path: 'dashboard', name: 'Dashboard', component: DashboardPage },
-      { path: 'ai-news', name: 'AiNews', component: AiNewsPage },
-      { path: 'alerts', name: 'Alerts', component: AlertSettingsPage },
+      { path: "dashboard", component: DashboardPage },
+      { path: "ai-news", component: AiNewsPage },
+      { path: "alerts", component: AlertSettingsPage },
     ],
   },
 ];
