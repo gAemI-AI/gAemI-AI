@@ -42,6 +42,42 @@ class StockProducer:
             logger.error(f"❌ Approval Key 발급 실패: {e}")
             raise
 
+        
+    def parse_stock_data(self, raw_message):
+        """
+        Raw data:
+        0|H0STCNT0|001|005930^101243^103700^5^-800^-0.77^103716.91^103900^104300^103200^103700^103600^264^3424539^355182644350^12149^15531^3382^76.90^1714627^1318567^1^0.39^23.30^090003^5^-200^090459^5^-600^094921^2^500^20251204^20^N^7687^5365^194754^398361^0.06^5337951^64.15^0^^103900
+        """
+
+        try:
+            # 1. | 로 분리 (헤더 분리)
+            parts = raw_message.split('|')
+            if len(parts) < 4:
+                return None
+
+            # 2. ^로 분리된 데이터 처리하기
+            data = parts[3].split('^')
+
+            # 3. 매핑
+            parsed_data = {
+                "stock_code": data[0],           # 종목코드 (005930)
+                "time": data[1],                 # 체결시간 (101243)
+                "current_price": int(data[2]),   # 현재가 (103700) -> 숫자로 변환
+                "diff": int(data[4]),            # 대비 (-800)
+                "rate": float(data[5]),          # 등락률 (-0.77)
+                "open_price": int(data[7]),      # 시가
+                "high_price": int(data[8]),      # 고가
+                "low_price": int(data[9]),       # 저가
+                "tick_volume": int(data[12]),    # 체결량 (264)
+                "accumulated_vol": int(data[13]) # 누적거래량
+            }
+
+            return parsed_data
+
+        except Exception as e:
+            logger.error(f"❌ 파싱 에러: {e} / Raw: {raw_message[:30]}...")
+            return None
+
     async def connect_websocket(self):
         """WebSocket 연결 및 데이터 수신"""
         # 테스트용으로 '삼성전자(005930)' 강제 구독
@@ -81,16 +117,15 @@ class StockProducer:
                     # 데이터 종류 판별
                     # 첫 글자가 0 또는 1이면 실시간 데이터 (암호화 여부)
                     if message[0] in ['0', '1']: 
-                        # Kafka로 보낼 메시지 구성
-                        # (나중에 여기서 파싱 로직을 추가하여 포맷 정의서대로 변환)
-                        kafka_data = {
-                            "type": "stock-tick",
-                            "raw_data": message # 실제는 파싱된 데이터 넣어야 함 (현재는 테스트라 전체 데이터)
-                        }
-                        
-                        # Kafka 'stock-ticks' 토픽으로 전송
-                        self.producer.send(KAFKA_TOPIC_TICKS, kafka_data)
-                        self.producer.flush() # 즉시 전송 강제
+                        # 1. 파싱하기
+                        json_data = self.parse_stock_data(message)
+
+                        if json_data:
+                            # 2. kafka로 쏘기 (JSON형태로)
+                            self.producer.send(KAFKA_TOPIC_TICKS, json_data)
+
+                            # 로그로 확인
+                            logger.info(f"🚀 Kafka 전송: {json_data['stock_code']} | {json_data['current_price']}원")
                         
                     else:
                         # JSON 형태의 시스템 메시지 (구독 성공, PINGPONG 등)
