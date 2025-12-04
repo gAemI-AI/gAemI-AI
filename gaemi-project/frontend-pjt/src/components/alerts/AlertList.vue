@@ -3,7 +3,14 @@
     <header class="header">
       <span>활성 알림 ({{ items.length }})</span>
     </header>
-    <div class="list">
+
+    <!-- 알림 없을 때 -->
+    <p v-if="items.length === 0" class="empty">
+      등록된 알림이 없습니다.
+    </p>
+
+    <!-- 알림 목록 -->
+    <div v-else class="list">
       <div v-for="item in items" :key="item.id" class="row">
         <div class="info">
           <div class="name">{{ item.stockName }}</div>
@@ -29,7 +36,7 @@
 defineProps({
   items: { type: Array, required: true },
 });
-defineEmits(['toggle', 'remove']);
+defineEmits(["toggle", "remove"]);
 </script>
 
 <style scoped>
@@ -42,6 +49,10 @@ defineEmits(['toggle', 'remove']);
 .header {
   font-size: 14px;
   margin-bottom: 10px;
+}
+.empty {
+  font-size: 13px;
+  color: #9ca3af;
 }
 .list {
   display: flex;
@@ -72,7 +83,7 @@ defineEmits(['toggle', 'remove']);
   cursor: pointer;
 }
 
-/* 토글 스위치 */
+/* 토글 */
 .toggle {
   position: relative;
   display: inline-block;

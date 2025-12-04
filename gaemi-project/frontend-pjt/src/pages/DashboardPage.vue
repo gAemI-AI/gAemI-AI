@@ -72,6 +72,24 @@ import FavoriteButton from "@/components/common/FavoriteButton.vue";
 /* Pinia Store */
 const store = useFavoritesStore();
 
+// 🔔 더미 알림 데이터 추가
+const alerts = ref([
+  {
+    id: 1,
+    statusClass: "working",
+    stockName: "삼성전자",
+    title: "목표가 도달했습니다.",
+    time: "10:32",
+  },
+  {
+    id: 2,
+    statusClass: "done",
+    stockName: "NAVER",
+    title: "지정가 이하로 하락했습니다.",
+    time: "09:15",
+  },
+]);
+
 /* ------------------------------- */
 /* 로그인 유저 관심종목 불러오기   */
 /* ------------------------------- */
@@ -119,7 +137,14 @@ const filteredStocks = computed(() => {
 });
 
 /* 관심종목 리스트 */
-const favoriteStocks = computed(() => store.favorites);
+// const favoriteStocks = computed(() => store.favorites);
+const favoriteStocks = computed(() =>
+  store.favorites
+    .map(code => stocks.find(s => s.code === code))
+    .filter(Boolean)
+);
+
+
 
 /* 이벤트 */
 function onSearch(keyword) {

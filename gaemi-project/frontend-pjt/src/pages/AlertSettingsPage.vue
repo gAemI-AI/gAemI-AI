@@ -10,16 +10,23 @@
 
       <div class="favorite-container">
         <div
-          v-for="item in favorites"
+          v-for="item in favoriteStocks"
           :key="item.code"
           class="favorite-item-box"
         >
           <div class="favorite-info">
+            <!-- 이름 출력 -->
             <span class="favorite-name">{{ item.name }}</span>
-            <span class="favorite-code">({{ item.code }})</span>
+            <!-- 코드가 있을 때만 괄호 출력 -->
+            <span
+              v-if="item.code"
+              class="favorite-code"
+            >
+              ({{ item.code }})
+            </span>
           </div>
 
-          <!-- 삭제 버튼 통일 -->
+          <!-- 삭제 버튼 -->
           <button class="icon-btn" @click="removeFavorite(item.code)">🗑️</button>
         </div>
       </div>
@@ -32,9 +39,9 @@
       <h2 class="section-title">알림 조건 관리</h2>
 
       <!-- 알림 생성 폼 -->
-      <AlertForm :stocks="favorites" @create="addAlert" />
+      <AlertForm :stocks="favoriteStocks" @create="addAlert" />
 
-      <!-- 알림 리스트 -->
+      <!-- 활성 알림 리스트 -->
       <AlertList :items="alerts" @remove="removeAlert" />
     </section>
 
@@ -52,36 +59,68 @@ import AlertList from "@/components/alerts/AlertList.vue";
 /* Pinia 관심종목 store */
 /* -------------------------------------------------- */
 const store = useFavoritesStore();
-const favorites = computed(() => store.favorites);
+
+/* 더미 종목 목록 (Dashboard와 동일 구조 유지) */
+const stocks = [
+  { code: "005930", name: "삼성전자" },
+  { code: "000660", name: "SK하이닉스" },
+  { code: "035420", name: "NAVER" },
+  { code: "006400", name: "삼성SDI" },
+  { code: "005380", name: "현대차" },
+];
+
+const favorites = computed(() =>
+  store.favorites.map(code => stocks.find(s => s.code === code)).filter(Boolean)
+);
+/* -------------------------------------------------- */
+/* store.favorites → 실제 종목 객체로 변환 */
+/* -------------------------------------------------- */
+const favoriteStocks = computed(() => {
+  return store.favorites
+    .map((item) => {
+      const code = typeof item === "string" ? item : item.code;
+      return stocks.find((s) => s.code === code);
+    })
+    .filter((s) => s && s.name && s.code); // 빈 데이터 제거
+});
+
+/* AlertForm 전달용: 코드 배열 */
+const favoriteCodes = computed(() => favoriteStocks.value.map((s) => s.code));
 
 /* -------------------------------------------------- */
-/* 알림 목록 상태 */
+/* 활성 알림 리스트 */
 /* -------------------------------------------------- */
-const alerts = ref([
-  { id: 1, stock: "005930", stockName: "삼성전자", enabled: true, description: "이상: 80,000원" },
-  { id: 2, stock: "000660", stockName: "SK하이닉스", enabled: true, description: "이하: 130,000원" }
-]);
+const alerts = ref([]); // ⭐ 초기값 -> 0개
 
-/* -------------------------------------------------- */
-/* 관심종목 삭제 */
-/* -------------------------------------------------- */
+/* 삭제 */
 function removeFavorite(code) {
   store.removeFavorite(code);
 }
 
-/* -------------------------------------------------- */
 /* 알림 추가 */
-/* -------------------------------------------------- */
+// function addAlert(alert) {
+//   alerts.value.push({
+//     id: Date.now(),
+//     enabled: true,
+//     ...alert,
+//   });
+// }
 function addAlert(alert) {
+  const stockObj = favorites.value.find(
+    (item) => item.code === alert.stock
+  );
+
   alerts.value.push({
     id: Date.now(),
-    ...alert
+    stock: alert.stock,
+    stockName: stockObj?.name || "",
+    description: `${alert.condition === "gte" ? "이상" : "이하"}: ${alert.target}원`,
+    enabled: true,
   });
 }
 
-/* -------------------------------------------------- */
+
 /* 알림 삭제 */
-/* -------------------------------------------------- */
 function removeAlert(id) {
   alerts.value = alerts.value.filter((a) => a.id !== id);
 }
@@ -94,7 +133,6 @@ function removeAlert(id) {
   padding: 30px 20px;
 }
 
-/* 전체 박스를 감싸는 컨테이너 */
 .section-box {
   background: white;
   padding: 24px;
@@ -109,11 +147,7 @@ function removeAlert(id) {
   margin-bottom: 16px;
 }
 
-
-/* ============================ */
-/* 관심종목 UI */
-/* ============================ */
-
+/* 관심종목 */
 .favorite-container {
   display: flex;
   flex-direction: column;
@@ -130,7 +164,7 @@ function removeAlert(id) {
   border: 1px solid #e5e7eb;
 }
 
-.favorite-info {
+.favorite-name {
   font-weight: 600;
 }
 
@@ -139,7 +173,6 @@ function removeAlert(id) {
   margin-left: 4px;
 }
 
-/* 휴지통 버튼 통일 */
 .icon-btn {
   border: none;
   background: none;
@@ -149,7 +182,6 @@ function removeAlert(id) {
   padding: 6px;
   border-radius: 6px;
 }
-
 .icon-btn:hover {
   background: #e5e7eb;
   color: #1f2937;
