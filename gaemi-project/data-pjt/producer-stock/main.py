@@ -108,16 +108,16 @@ class StockProducer:
             timestamp = int(dt.timestamp() * 1000)
 
             parsed_data = {
-                "stock_code": data[0],
-                "timestamp": timestamp,
-                "current_price": int(data[2]),
-                "diff": int(data[4]),
-                "rate": float(data[5]),
-                "open_price": int(data[7]),
-                "high_price": int(data[8]),
-                "low_price": int(data[9]),
-                "tick_volume": int(data[12]),
-                "accumulated_vol": int(data[13])
+                "stock_code": data[0], # 종목 코드
+                "timestamp": timestamp, # 체결 시간
+                "current_price": int(data[2]), # 현재가
+                "diff": int(data[4]), # 전일대비 부호
+                "rate": float(data[5]), # 등락률 (전일 대비율)
+                "open_price": int(data[7]), # 시가
+                "high_price": int(data[8]), # 고가
+                "low_price": int(data[9]), # 저가
+                "tick_volume": int(data[12]), # 이번 체결량
+                "accumulated_vol": int(data[13]) # 누적 거래량
             }
 
             return parsed_data
@@ -176,14 +176,14 @@ class StockProducer:
                     })
 
             parsed_data = {
-                "stock_code": data[0],
-                "timestamp": timestamp,
-                "total_ask_volume": int(data[3]),  # TOTAL_ASKP_RSQN
-                "total_bid_volume": int(data[4]),  # TOTAL_BID_RSQN
-                "best_ask_price": int(data[12]),   # ASKP1
-                "best_bid_price": int(data[22]),   # BIDP1
-                "ask_levels": ask_levels,          # 매도 1~10호가 배열
-                "bid_levels": bid_levels           # 매수 1~10호가 배열
+                "stock_code": data[0], # 종목 코드
+                "timestamp": timestamp, # 호가 시간
+                "total_ask_volume": int(data[3]),  # TOTAL_ASKP_RSQN (총 매도 잔량)
+                "total_bid_volume": int(data[4]),  # TOTAL_BID_RSQN (총 매수 잔량)
+                "best_ask_price": int(data[12]),   # ASKP1 (매도 1호가)
+                "best_bid_price": int(data[22]),   # BIDP1 (매수 1호가)
+                "ask_levels": ask_levels,          # 매도 1~10호가 배열 (JSON Array)
+                "bid_levels": bid_levels           # 매수 1~10호가 배열 (JSON Array)
             }
 
             return parsed_data
@@ -219,10 +219,10 @@ class StockProducer:
             parsed_data = {
                 "index_code": data[0],                  # "0001" (KOSPI)
                 "timestamp": timestamp,
-                "current_value": float(data[2]),        # 2540.50
-                "change_value": float(data[3]),         # 12.50
-                "change_rate": float(data[4]),          # 0.49
-                "volume": int(data[5])                  # 5000000
+                "current_value": float(data[2]),        # 현재 지수
+                "change_value": float(data[3]),         # 대비
+                "change_rate": float(data[4]),          # 등략률(%)
+                "volume": int(data[5])                  # 거래량
             }
 
             return parsed_data
