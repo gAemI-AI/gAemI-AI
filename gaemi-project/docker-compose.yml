@@ -93,6 +93,19 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
 
+# Kafka UI 서비스
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: gaemi_kafka_ui
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=Gaemi-Cluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=gaemi_kafka:29092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=gaemi_zookeeper:2181
+    depends_on:
+      - kafka
+
     # 6. 주식 데이터 수집기 (Producer)
   producer-stock:
     build:
