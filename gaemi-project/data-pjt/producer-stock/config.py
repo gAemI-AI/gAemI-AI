@@ -1,6 +1,6 @@
 import os
 
-# KIS API 설정 (환경변수에서 로드)
+# KIS API 설정  
 KIS_APP_KEY = os.getenv("KIS_APP_KEY")
 KIS_APP_SECRET = os.getenv("KIS_APP_SECRET")
 

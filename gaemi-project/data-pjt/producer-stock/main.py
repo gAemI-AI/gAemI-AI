@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class StockProducer:
     def __init__(self):
         # 1. Kafka Producer 초기화
-        # config.py에서 KAFKA_BROKER (kafka:29092)를 가져옵니다.
+        # config.py에서 KAFKA_BROKER (kafka:29092) 가져옴
         self.producer = KafkaProducer(
             bootstrap_servers=KAFKA_BROKER,
             value_serializer=lambda v: json.dumps(v).encode('utf-8'),
@@ -48,7 +48,7 @@ class StockProducer:
         stock_code = "005930" 
 
         # 웹소켓 연결 시작
-        async with websockets.connect(f"{KIS_WS_URL}/tryitout/H0UPCNT0") as websocket:
+        async with websockets.connect(KIS_WS_URL) as websocket:
             logger.info("✅ KIS WebSocket 연결 성공!")
 
             # 1. 구독 요청 메시지 전송 (JSON)
@@ -61,7 +61,7 @@ class StockProducer:
                 },
                 "body": {
                     "input": {
-                        "tr_id": "H0UPCNT0",  # 실시간 주식 체결가 TR ID
+                        "tr_id": "H0STCNT0",  # 실시간 주식 체결가 TR ID
                         "tr_key": stock_code  # 종목코드
                     }
                 }
@@ -75,8 +75,8 @@ class StockProducer:
                     message = await websocket.recv()
                     
         
-                    # 🌟 [디버깅용 추가] 무조건 앞부분 100글자 출력해보기
-                    logger.info(f"👀 [RAW 데이터 도착]: {message[:100]}")  # <-- 이 줄 추가!!
+                    # [디버깅용] 무조건 출력해보기
+                    logger.info(f"👀 [RAW 데이터 도착]: {message}")  
 
                     # 데이터 종류 판별
                     # 첫 글자가 0 또는 1이면 실시간 데이터 (암호화 여부)
@@ -85,7 +85,7 @@ class StockProducer:
                         # (나중에 여기서 파싱 로직을 추가하여 포맷 정의서대로 변환)
                         kafka_data = {
                             "type": "stock-tick",
-                            "raw_data": message # 일단 원본을 그대로 보냅니다.
+                            "raw_data": message # 실제는 파싱된 데이터 넣어야 함 (현재는 테스트라 전체 데이터)
                         }
                         
                         # Kafka 'stock-ticks' 토픽으로 전송
@@ -100,7 +100,8 @@ class StockProducer:
 
                             if tr_id == 'PINGPONG':
                                 # 핑퐁 메시지는 로그만 찍고 넘어감 (데이터 아님)
-                                await websocket.pong(message)
+                                await websocket.send(message)
+
                                 logger.info(f"🏓 PINGPONG 수신")
                             else:
                                 logger.info(f"🔔 시스템 메시지: {data}")
