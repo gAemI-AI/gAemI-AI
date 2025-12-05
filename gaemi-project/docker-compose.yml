@@ -123,7 +123,10 @@ services:
 
    # 7. Flink JobManager
   flink-jobmanager:
-    image: flink:1.17.1-scala_2.12-java11
+    build:
+      context: ./data-pjt/flink
+      dockerfile: Dockerfile-flink
+    image: gaemi-flink:1.0
     container_name: gaemi_flink_jobmanager
     ports:
       - "8081:8081"   # Flink Web UI
@@ -132,10 +135,12 @@ services:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
     depends_on:
       - kafka
+    volumes:
+      - ./data-pjt/flink-jobs:/opt/flink/usrlib
    
   # 8. Flink TaskManager
   flink-taskmanager:
-    image: flink:1.17.1-scala_2.12-java11
+    image: gaemi-flink:1.0
     container_name: gaemi_flink_taskmanager
     command: taskmanager
     environment:
