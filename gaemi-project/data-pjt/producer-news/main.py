@@ -131,6 +131,7 @@ class NewsProducer:
                 news_data = {
                     "news_id": news_id,
                     "stock_code": stock_code,
+                    "stock_name": stock_name,
                     "title": entry.title,
                     "link": entry.link,
                     "source": entry.get('source', {}).get('title', 'Google News'),
