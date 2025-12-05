@@ -3,7 +3,7 @@
 
 
 ## ✨ 기술개발문서
-- 
+- [왜 Google RSS를 사용했나요?](https://www.notion.so/Google-RSS-2c00c3d3c9ea803ca500d5374af9cdc1?source=copy_link)
 - 
 
 ## 📌 Git 협업 전략
