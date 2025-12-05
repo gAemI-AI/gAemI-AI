@@ -3,8 +3,8 @@
 
 
 ## ✨ 기술개발문서
-- 
-- 
+- [왜 Google RSS를 사용했나요?](https://www.notion.so/Google-RSS-2c00c3d3c9ea803ca500d5374af9cdc1?source=copy_link)
+- [중복방지를 위한 2단계 방어선 구축! In-Memory Filtering + Kafka Log Compaction](https://www.notion.so/2-In-Memory-Filtering-Kafka-Log-Compaction-2c00c3d3c9ea802eb722e7f050803e6c?source=copy_link)
 
 ## 📌 Git 협업 전략
 -

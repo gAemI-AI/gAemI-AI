@@ -93,7 +93,7 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
 
-# Kafka UI 서비스
+  # Kafka UI 서비스
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: gaemi_kafka_ui
@@ -106,7 +106,7 @@ services:
     depends_on:
       - kafka
 
-    # 6. 주식 데이터 수집기 (Producer)
+  # 6. 주식 데이터 수집기 (Producer)
   producer-stock:
     build:
       context: ./data-pjt/producer-stock
@@ -121,7 +121,20 @@ services:
       - kafka
     restart: on-failure
 
-   # 7. Flink JobManager
+  # 7. 뉴스 데이터 수집기 (Procuer2)
+  producer-news:
+    build:
+      context: ./data-pjt/producer-news
+    container_name: gaemi_producer_news
+    volumes:
+      - ./data-pjt/producer-news:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - kafka
+    restart: on-failure
+
+   # 8. Flink JobManager
   flink-jobmanager:
     image: flink:1.17.1-scala_2.12-java11
     container_name: gaemi_flink_jobmanager
@@ -133,7 +146,7 @@ services:
     depends_on:
       - kafka
    
-  # 8. Flink TaskManager
+  # 9. Flink TaskManager
   flink-taskmanager:
     image: flink:1.17.1-scala_2.12-java11
     container_name: gaemi_flink_taskmanager
