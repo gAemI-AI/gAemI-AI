@@ -93,7 +93,7 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
 
-# Kafka UI 서비스
+  # Kafka UI 서비스
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: gaemi_kafka_ui
@@ -106,7 +106,7 @@ services:
     depends_on:
       - kafka
 
-    # 6. 주식 데이터 수집기 (Producer)
+  # 6. 주식 데이터 수집기 (Producer)
   producer-stock:
     build:
       context: ./data-pjt/producer-stock
@@ -121,7 +121,19 @@ services:
       - kafka
     restart: on-failure
 
-# (나중에 data-pjt 서비스 여기에 추가)
+  # 7. 뉴스 데이터 수집기 (Procuer2)
+  producer-news:
+    build:
+      context: ./data-pjt/producer-news
+    container_name: gaemi_producer_news
+    volumes:
+      - ./data-pjt/producer-news:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - kafka
+    restart: on-failure
+
 # Docker가 관리할 볼륨 정의
 volumes:
   postgres_data:
