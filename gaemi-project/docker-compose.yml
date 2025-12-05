@@ -134,6 +134,29 @@ services:
       - kafka
     restart: on-failure
 
+   # 8. Flink JobManager
+  flink-jobmanager:
+    image: flink:1.17.1-scala_2.12-java11
+    container_name: gaemi_flink_jobmanager
+    ports:
+      - "8081:8081"   # Flink Web UI
+    command: jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    depends_on:
+      - kafka
+   
+  # 9. Flink TaskManager
+  flink-taskmanager:
+    image: flink:1.17.1-scala_2.12-java11
+    container_name: gaemi_flink_taskmanager
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+      - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=2
+    depends_on:
+      - flink-jobmanager
+   
 # Docker가 관리할 볼륨 정의
 volumes:
   postgres_data:
