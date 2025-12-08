@@ -1,11 +1,7 @@
-# stock_raw_ingest.py
-# Kafka → Flink → Elasticsearch (raw-stocks 저장)
-
 from pyflink.datastream import StreamExecutionEnvironment
-from pyflink.datastream.connectors import FlinkKafkaConsumer
+from pyflink.datastream.connectors.kafka import KafkaSource, KafkaOffsetsInitializer
 from pyflink.common.serialization import SimpleStringSchema
-from pyflink.common.typeinfo import Types
-from pyflink.datastream import TimeCharacteristic
+from pyflink.common.watermark_strategy import WatermarkStrategy
 
 import json
 import requests
@@ -15,32 +11,26 @@ import requests
 # 🔧 Elasticsearch Sink 함수
 # -----------------------------
 def save_to_elasticsearch(record):
-    """
-    Kafka에서 읽은 데이터(JSON)를 Elasticsearch로 저장한다.
-    record는 Python dict 형태이다.
-    """
     ES_URL = "http://elasticsearch:9200/raw-stocks/_doc/"
 
     try:
         res = requests.post(ES_URL, json=record, timeout=5)
-        print(f"[ES INSERT] status={res.status_code}, body={record}")
-
+        print(f"[ES INSERT] {res.status_code} {record}", flush=True)
     except Exception as e:
-        print(f"[ES ERROR] {e}, record={record}")
+        print(f"[ES ERROR] {e}, record={record}", flush=True)
+
+    return record   # PyFlink map() 요구사항
 
 
 # -----------------------------
 # 🔧 JSON 파싱 함수
 # -----------------------------
 def parse_json(value):
-    """
-    Kafka 메시지(JSON 문자열)를 dict로 변환.
-    잘못된 데이터가 들어올 경우를 대비해 예외처리 포함.
-    """
+    print("🔥 RAW:", value, flush=True)
+
     try:
         data = json.loads(value)
 
-        # 필요한 필드만 검증 (명세 기반)
         required_fields = [
             "stock_code", "stock_name", "timestamp", "current_price",
             "diff", "rate", "open_price", "high_price", "low_price",
@@ -49,13 +39,14 @@ def parse_json(value):
 
         for f in required_fields:
             if f not in data:
-                print(f"[WARN] Missing field: {f}")
-                data[f] = None  # 기본값
+                print(f"[WARN] Missing field: {f}", flush=True)
+                data[f] = None
 
+        print("✅ Parsed:", data, flush=True)
         return data
 
     except Exception as e:
-        print(f"[JSON ERROR] {e}, raw={value}")
+        print(f"[JSON ERROR] {e}, raw={value}", flush=True)
         return None
 
 
@@ -64,42 +55,42 @@ def parse_json(value):
 # -----------------------------
 def run():
     env = StreamExecutionEnvironment.get_execution_environment()
+    env.set_parallelism(1)
 
-    # Kafka Consumer 설정
-    kafka_props = {
-        "bootstrap.servers": "kafka:29092",
-        "group.id": "flink-stock-consumer",
-        "auto.offset.reset": "latest"
-    }
-
-    consumer = FlinkKafkaConsumer(
-        topics="stock-ticks",
-        deserialization_schema=SimpleStringSchema(),
-        properties=kafka_props
+    # -------------------------------------------------
+    # ⭐ Kafka 커넥터 + Kafka 클라이언트 JAR 등록 (중요!)
+    # -------------------------------------------------
+    env.add_jars(
+        "file:///opt/flink/lib/flink-connector-kafka-1.17.1.jar",
+        "file:///opt/flink/lib/kafka-clients-3.5.1.jar"
     )
 
-    # Kafka Source 추가
-    stream = env.add_source(consumer)
-
-    # JSON → dict 변환
-    parsed = stream.map(
-        lambda s: parse_json(s),
-        output_type=Types.PICKLED_BYTE_ARRAY()
+    # -------------------------------------------------
+    # Kafka Source 구성
+    # -------------------------------------------------
+    source = (
+        KafkaSource.builder()
+        .set_bootstrap_servers("kafka:29092")
+        .set_topics("stock-ticks")
+        .set_group_id("flink-stock-consumer")
+        .set_starting_offsets(KafkaOffsetsInitializer.latest())
+        .set_value_only_deserializer(SimpleStringSchema())
+        .build()
     )
 
-    # None 제거
+    stream = env.from_source(
+        source,
+        WatermarkStrategy.no_watermarks(),
+        "KafkaSource"
+    )
+
+    parsed = stream.map(parse_json)
     cleaned = parsed.filter(lambda x: x is not None)
 
-    # Elasticsearch 저장
-    cleaned.map(
-        lambda record: save_to_elasticsearch(record),
-        output_type=Types.STRING()
-    )
+    cleaned.map(save_to_elasticsearch)
 
-    # Job 이름
     env.execute("StockRawIngestJob")
 
 
 if __name__ == "__main__":
     run()
-

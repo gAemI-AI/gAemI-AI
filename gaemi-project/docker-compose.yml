@@ -126,7 +126,7 @@ services:
     build:
       context: ./data-pjt/flink
       dockerfile: Dockerfile-flink
-    image: gaemi-flink:1.0
+    image:  gaemi-flink-jobmanager:1.0
     container_name: gaemi_flink_jobmanager
     ports:
       - "8081:8081"   # Flink Web UI
@@ -140,7 +140,10 @@ services:
    
   # 8. Flink TaskManager
   flink-taskmanager:
-    image: gaemi-flink:1.0
+    build:
+      context: ./data-pjt
+      dockerfile: flink/Dockerfile-flink
+    image:  gaemi-flink-taskmanager:1.0
     container_name: gaemi_flink_taskmanager
     command: taskmanager
     environment:
@@ -148,9 +151,32 @@ services:
       - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=2
     depends_on:
       - flink-jobmanager
-   
+  
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: gaemi_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.1
+    container_name: gaemi_kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
 # Docker가 관리할 볼륨 정의
 volumes:
   postgres_data:
   zookeeper_data:
   kafka_data:
+  esdata:
