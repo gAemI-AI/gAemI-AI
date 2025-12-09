@@ -142,8 +142,8 @@ services:
   # 8. Flink TaskManager
   flink-taskmanager:
     build:
-      context: ./data-pjt
-      dockerfile: flink/Dockerfile-flink
+      context: ./data-pjt/flink # JobMagaer랑 통일 / Job, Task Manager는 역할만 다르고 똑같은 소프트웨어 -> 둘 다 같은 파이썬 버전, 라이브러리, kafka 커넥트를 가지고 있어야함
+      dockerfile: Dockerfile-flink
     platform: linux/amd64  # 추가
     image:  gaemi-flink-taskmanager:1.0
     container_name: gaemi_flink_taskmanager
@@ -153,6 +153,9 @@ services:
       - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=2
     depends_on:
       - flink-jobmanager
+    volumes:
+      - ./data-pjt/flink-jobs:/opt/flink/usrlib # TaskManager도 코드를 알아야함 -> 볼륨 마운트 필수
+
   
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
