@@ -127,6 +127,7 @@ services:
       context: ./data-pjt/flink
       dockerfile: Dockerfile-flink
     image:  gaemi-flink-jobmanager:1.0
+    platform: linux/amd64  # 추가
     container_name: gaemi_flink_jobmanager
     ports:
       - "8081:8081"   # Flink Web UI
@@ -143,6 +144,7 @@ services:
     build:
       context: ./data-pjt
       dockerfile: flink/Dockerfile-flink
+    platform: linux/amd64  # 추가
     image:  gaemi-flink-taskmanager:1.0
     container_name: gaemi_flink_taskmanager
     command: taskmanager
