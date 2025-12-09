@@ -7,26 +7,20 @@ import json
 import requests
 
 
-# -----------------------------
-# 🔧 Elasticsearch Sink 함수
-# -----------------------------
 def save_to_elasticsearch(record):
     ES_URL = "http://elasticsearch:9200/raw-stocks/_doc/"
 
     try:
         res = requests.post(ES_URL, json=record, timeout=5)
-        print(f"[ES INSERT] {res.status_code} {record}", flush=True)
+        print(f"[ES INSERT] {res.status_code} {record}")
     except Exception as e:
-        print(f"[ES ERROR] {e}, record={record}", flush=True)
+        print(f"[ES ERROR] {e}, record={record}")
 
-    return record   # PyFlink map() 요구사항
+    return record
 
 
-# -----------------------------
-# 🔧 JSON 파싱 함수
-# -----------------------------
-def parse_json(value):
-    print("🔥 RAW:", value, flush=True)
+def parse_json(value: str):
+    print("🔥 RAW:", value)
 
     try:
         data = json.loads(value)
@@ -39,41 +33,34 @@ def parse_json(value):
 
         for f in required_fields:
             if f not in data:
-                print(f"[WARN] Missing field: {f}", flush=True)
+                print(f"[WARN] Missing field: {f}")
                 data[f] = None
 
-        print("✅ Parsed:", data, flush=True)
+        print("✅ Parsed:", data)
         return data
 
     except Exception as e:
-        print(f"[JSON ERROR] {e}, raw={value}", flush=True)
+        print(f"[JSON ERROR] {e}, raw={value}")
         return None
 
 
-# -----------------------------
-# 🚀 Flink Job 실행 함수
-# -----------------------------
 def run():
     env = StreamExecutionEnvironment.get_execution_environment()
     env.set_parallelism(1)
 
-    # -------------------------------------------------
-    # ⭐ Kafka 커넥터 + Kafka 클라이언트 JAR 등록 (중요!)
-    # -------------------------------------------------
+    # 꼭 필요
     env.add_jars(
         "file:///opt/flink/lib/flink-connector-kafka-1.17.1.jar",
         "file:///opt/flink/lib/kafka-clients-3.5.1.jar"
     )
 
-    # -------------------------------------------------
-    # Kafka Source 구성
-    # -------------------------------------------------
+    # ⭐⭐ 여기 두 줄이 핵심 ⭐⭐
     source = (
         KafkaSource.builder()
         .set_bootstrap_servers("kafka:29092")
-        .set_topics("stock-ticks")
-        .set_group_id("flink-stock-consumer")
-        .set_starting_offsets(KafkaOffsetsInitializer.latest())
+        .set_topics("stock-ticks")                       # ← topic 정확히 이 이름
+        .set_group_id("flink-stock-consumer-debug-1")    # ← 새 group id
+        .set_starting_offsets(KafkaOffsetsInitializer.earliest())  # ← 토픽 처음부터
         .set_value_only_deserializer(SimpleStringSchema())
         .build()
     )
