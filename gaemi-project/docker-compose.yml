@@ -126,7 +126,7 @@ services:
     build:
       context: ./data-pjt/flink
       dockerfile: Dockerfile-flink
-    image:  gaemi-flink-jobmanager:1.0
+    image: gaemi-flink-jobmanager:1.18
     platform: linux/amd64  # 추가
     container_name: gaemi_flink_jobmanager
     ports:
@@ -137,7 +137,9 @@ services:
     depends_on:
       - kafka
     volumes:
-      - ./data-pjt/flink-jobs:/opt/flink/usrlib
+      - ./data-pjt/flink-jobs:/opt/flink/usrlib/jobs
+      - ./data-pjt/flink/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar
+      - ./data-pjt/flink/kafka-clients-3.5.1.jar:/opt/flink/lib/kafka-clients-3.5.1.jar
    
   # 8. Flink TaskManager
   flink-taskmanager:
@@ -145,7 +147,7 @@ services:
       context: ./data-pjt/flink # JobMagaer랑 통일 / Job, Task Manager는 역할만 다르고 똑같은 소프트웨어 -> 둘 다 같은 파이썬 버전, 라이브러리, kafka 커넥트를 가지고 있어야함
       dockerfile: Dockerfile-flink
     platform: linux/amd64  # 추가
-    image:  gaemi-flink-taskmanager:1.0
+    image: gaemi-flink-taskmanager:1.18
     container_name: gaemi_flink_taskmanager
     command: taskmanager
     environment:
@@ -154,7 +156,9 @@ services:
     depends_on:
       - flink-jobmanager
     volumes:
-      - ./data-pjt/flink-jobs:/opt/flink/usrlib # TaskManager도 코드를 알아야함 -> 볼륨 마운트 필수
+      - ./data-pjt/flink-jobs:/opt/flink/usrlib/jobs # TaskManager도 코드를 알아야함 -> 볼륨 마운트 필수
+      - ./data-pjt/flink/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar
+      - ./data-pjt/flink/kafka-clients-3.5.1.jar:/opt/flink/lib/kafka-clients-3.5.1.jar
 
   
   elasticsearch:

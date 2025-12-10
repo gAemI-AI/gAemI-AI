@@ -48,11 +48,11 @@ def run():
     env = StreamExecutionEnvironment.get_execution_environment()
     env.set_parallelism(1)
 
-    # 꼭 필요
-    env.add_jars(
-        "file:///opt/flink/lib/flink-connector-kafka-1.17.1.jar",
-        "file:///opt/flink/lib/kafka-clients-3.5.1.jar"
-    )
+    # # 꼭 필요
+    # env.add_jars(
+    #     "file:///opt/flink/lib/flink-connector-kafka-1.17.1.jar",
+    #     "file:///opt/flink/lib/kafka-clients-3.5.1.jar"
+    # )
 
     # ⭐⭐ 여기 두 줄이 핵심 ⭐⭐
     source = (
