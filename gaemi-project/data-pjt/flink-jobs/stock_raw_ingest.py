@@ -11,7 +11,7 @@ def save_to_elasticsearch(record):
     ES_URL = "http://elasticsearch:9200/raw-stocks/_doc/"
 
     try:
-        res = requests.post(ES_URL, json=record, timeout=5)
+        res = requests.post(ES_URL, json=record, timeout=5) #post: 같은 종목이라도 시간이 다르면 새 데이터 -> 계속 쌓여야하므로 ID 자동 생성 POST 사용
         print(f"[ES INSERT] {res.status_code} {record}")
     except Exception as e:
         print(f"[ES ERROR] {e}, record={record}")
@@ -31,8 +31,9 @@ def parse_json(value: str):
             "tick_volume", "accumulated_vol"
         ]
 
+        # 필수 데이터(종목코드, 현재가 등)가 있는지 검사
         for f in required_fields:
-            if f not in data:
+            if f not in data: # 없으면 None으로 채워 데이터 형식 맞춤
                 print(f"[WARN] Missing field: {f}")
                 data[f] = None
 
@@ -54,7 +55,7 @@ def run():
     #     "file:///opt/flink/lib/kafka-clients-3.5.1.jar"
     # )
 
-    # ⭐⭐ 여기 두 줄이 핵심 ⭐⭐
+    # 데이터 수도꼭지 틀기
     source = (
         KafkaSource.builder()
         .set_bootstrap_servers("kafka:29092")
@@ -71,10 +72,10 @@ def run():
         "KafkaSource"
     )
 
-    parsed = stream.map(parse_json)
-    cleaned = parsed.filter(lambda x: x is not None)
+    parsed = stream.map(parse_json) # 카프카에서 받은 문자열 JSON으로 변환
+    cleaned = parsed.filter(lambda x: x is not None) # JSON 변환에 실패한 데이터(None)는 stream에서 제거
 
-    cleaned.map(save_to_elasticsearch)
+    cleaned.map(save_to_elasticsearch) 
 
     env.execute("StockRawIngestJob")
 

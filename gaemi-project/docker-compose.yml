@@ -93,7 +93,7 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
 
-  # Kafka UI 서비스
+  # 6. Kafka UI 서비스
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: gaemi_kafka_ui
@@ -106,7 +106,7 @@ services:
     depends_on:
       - kafka
 
-  # 6. 주식 데이터 수집기 (Producer)
+  # 7. (kafka) 주식 데이터 수집기 (Producer)
   producer-stock:
     build:
       context: ./data-pjt/producer-stock
@@ -121,7 +121,7 @@ services:
       - kafka
     restart: on-failure
 
-  # 7. 뉴스 데이터 수집기 (Procuer2)
+  # 8. (kafka) 뉴스 데이터 수집기 (Producer2)
   producer-news:
     build:
       context: ./data-pjt/producer-news
@@ -134,7 +134,7 @@ services:
       - kafka
     restart: on-failure
 
-   # 8. Flink JobManager
+   # 9. Flink JobManager
   flink-jobmanager:
     build:
       context: ./data-pjt/flink
@@ -147,14 +147,17 @@ services:
     command: jobmanager
     environment:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+      - PYTHONPATH=/opt/flink/usrlib/jobs
     depends_on:
       - kafka
     volumes:
       - ./data-pjt/flink-jobs:/opt/flink/usrlib/jobs
       - ./data-pjt/flink/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar
       - ./data-pjt/flink/kafka-clients-3.5.1.jar:/opt/flink/lib/kafka-clients-3.5.1.jar
-   
-  # 9. Flink TaskManager
+    env_file:
+      - ./data-pjt/flink-jobs/.env
+
+  # 10. Flink TaskManager
   flink-taskmanager:
     build:
       context: ./data-pjt/flink # JobMagaer랑 통일 / Job, Task Manager는 역할만 다르고 똑같은 소프트웨어 -> 둘 다 같은 파이썬 버전, 라이브러리, kafka 커넥트를 가지고 있어야함
@@ -166,14 +169,43 @@ services:
     environment:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
       - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=2
+      - PYTHONPATH=/opt/flink/usrlib/jobs
     depends_on:
       - flink-jobmanager
     volumes:
       - ./data-pjt/flink-jobs:/opt/flink/usrlib/jobs # TaskManager도 코드를 알아야함 -> 볼륨 마운트 필수
       - ./data-pjt/flink/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar
       - ./data-pjt/flink/kafka-clients-3.5.1.jar:/opt/flink/lib/kafka-clients-3.5.1.jar
-
+    env_file:
+      - ./data-pjt/flink-jobs/.env
   
+  # 11. Job 자동 제출기 (일회용)
+  flink-job-submitter:
+    image: gaemi-flink-jobmanager:1.18  # 기존 이미지 재사용
+    platform: linux/amd64
+    container_name: gaemi_job_submitter
+    depends_on:
+      - flink-jobmanager
+    env_file:
+      - ./data-pjt/flink-jobs/.env
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    volumes:
+      - ./data-pjt/flink-jobs:/opt/flink/usrlib/jobs
+      - ./data-pjt/flink/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar
+      - ./data-pjt/flink/kafka-clients-3.5.1.jar:/opt/flink/lib/kafka-clients-3.5.1.jar
+    command: >
+      /bin/sh -c "
+        echo '⏳ JobManager가 켜질 때까지 30초 대기...' &&
+        sleep 30 &&
+        echo '🚀 주가 데이터 수집 Job 제출' &&
+        /opt/flink/bin/flink run -m flink-jobmanager:8081 -d -py /opt/flink/usrlib/jobs/stock_raw_ingest.py &&
+        echo '🚀 뉴스 AI 분석 Job 제출' &&
+        /opt/flink/bin/flink run -m flink-jobmanager:8081 -d -py /opt/flink/usrlib/jobs/news_ai_analysis.py &&
+        echo '✅ 모든 Job 제출 완료!'"
+    restart: "no"  # 할 일 다 하면 꺼짐 (계속 재시작 방지)
+
+  # 12. Elasticsearch
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
     container_name: gaemi_elasticsearch
@@ -186,6 +218,7 @@ services:
     volumes:
       - esdata:/usr/share/elasticsearch/data
 
+  # 13. Kibana
   kibana:
     image: docker.elastic.co/kibana/kibana:8.11.1
     container_name: gaemi_kibana
