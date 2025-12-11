@@ -60,97 +60,116 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useFavoritesStore } from '@/stores/favoritesStore.js'
+import { ref, computed, onMounted } from "vue";
+import { useFavoritesStore } from "@/stores/favoritesStore.js";
 
-import StockSearchBar from '@/components/dashboard/StockSearchBar.vue'
-import StockTickerRow from '@/components/dashboard/StockTickerRow.vue'
-import StockDetailCard from '@/components/dashboard/StockDetailCard.vue'
-import AlertHistoryList from '@/components/dashboard/AlertHistoryList.vue'
-import FavoriteButton from '@/components/common/FavoriteButton.vue'
+import StockSearchBar from "@/components/dashboard/StockSearchBar.vue";
+import StockTickerRow from "@/components/dashboard/StockTickerRow.vue";
+import StockDetailCard from "@/components/dashboard/StockDetailCard.vue";
+import AlertHistoryList from "@/components/dashboard/AlertHistoryList.vue";
+import FavoriteButton from "@/components/common/FavoriteButton.vue";
 
-/* -------------------------------------------------- */
-/* Pinia store (관심종목 관리) */
-/* -------------------------------------------------- */
-const store = useFavoritesStore()
+/* Pinia Store */
+const store = useFavoritesStore();
 
-/* -------------------------------------------------- */
-/* 상태 관리 */
-/* -------------------------------------------------- */
-const searchKeyword = ref('')
+// 🔔 더미 알림 데이터 추가
+const alerts = ref([
+  {
+    id: 1,
+    statusClass: "working",
+    stockName: "삼성전자",
+    title: "목표가 도달했습니다.",
+    time: "10:32",
+  },
+  {
+    id: 2,
+    statusClass: "done",
+    stockName: "NAVER",
+    title: "지정가 이하로 하락했습니다.",
+    time: "09:15",
+  },
+]);
 
-// 🔵 검색 종목 상태
-const searchSelectedStock = ref(null)
-const searchChartOpen = ref(false)
+/* ------------------------------- */
+/* 로그인 유저 관심종목 불러오기   */
+/* ------------------------------- */
+onMounted(() => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (user?.favorites) {
+    store.loadFavorites(user.favorites); // ⭐ Pinia에 로드
+  }
+});
 
-// 🟣 관심 종목 상태
-const favoriteSelectedStock = ref(null)
-const favoriteChartOpen = ref(false)
+/* -------------------------------------- */
+/* 검색 관련 상태 */
+/* -------------------------------------- */
+const searchKeyword = ref("");
+const searchSelectedStock = ref(null);
+const searchChartOpen = ref(false);
 
-/* -------------------------------------------------- */
+/* -------------------------------------- */
+/* 관심종목 상태 */
+/* -------------------------------------- */
+const favoriteSelectedStock = ref(null);
+const favoriteChartOpen = ref(false);
+
+/* -------------------------------------- */
 /* 더미 종목 데이터 */
-/* -------------------------------------------------- */
+/* -------------------------------------- */
 const stocks = [
   { code: '005930', name: '삼성전자', price: 70680, change: -1320, changeRate: -1.83 },
   { code: '000660', name: 'SK하이닉스', price: 139421, change: 579, changeRate: 0.41 },
   { code: '035420', name: 'NAVER', price: 215222, change: 3722, changeRate: 1.76 },
   { code: '006400', name: '삼성SDI', price: 386519, change: -6481, changeRate: -1.65 },
   { code: '005380', name: '현대차', price: 195740, change: 3240, changeRate: 1.68 }
-]
+];
 
-/* -------------------------------------------------- */
-/* 알림 데이터 */
-/* -------------------------------------------------- */
-const alerts = ref([
-  {
-    id: 1,
-    stockName: '삼성전자',
-    statusClass: 'working',
-    title: '목표가 75,000원 도달 시 알림',
-    time: '5분 전'
-  }
-])
-
-/* -------------------------------------------------- */
+/* -------------------------------------- */
 /* 검색 결과 필터링 */
-/* -------------------------------------------------- */
+/* -------------------------------------- */
 const filteredStocks = computed(() => {
-  if (!searchKeyword.value) return stocks
-  return stocks.filter((s) =>
-    s.name.includes(searchKeyword.value) || s.code.includes(searchKeyword.value)
-  )
-})
+  if (!searchKeyword.value) return stocks;
+  return stocks.filter(
+    (s) =>
+      s.name.includes(searchKeyword.value) ||
+      s.code.includes(searchKeyword.value)
+  );
+});
 
-/* -------------------------------------------------- */
-/* 관심종목 가져오기 */
-/* -------------------------------------------------- */
-const favoriteStocks = computed(() => store.favorites)
+/* 관심종목 리스트 */
+// const favoriteStocks = computed(() => store.favorites);
+const favoriteStocks = computed(() =>
+  store.favorites
+    .map(code => stocks.find(s => s.code === code))
+    .filter(Boolean)
+);
 
-/* -------------------------------------------------- */
-/* 이벤트 핸들러 */
-/* -------------------------------------------------- */
+
+
+/* 이벤트 */
 function onSearch(keyword) {
-  searchKeyword.value = keyword
+  searchKeyword.value = keyword;
 }
 
 function onSelectFromSearch(stock) {
   if (searchSelectedStock.value?.code === stock.code) {
-    searchChartOpen.value = !searchChartOpen.value
+    searchChartOpen.value = !searchChartOpen.value;
   } else {
-    searchSelectedStock.value = stock
-    searchChartOpen.value = true
+    searchSelectedStock.value = stock;
+    searchChartOpen.value = true;
   }
 }
 
 function onSelectFromFavorite(stock) {
   if (favoriteSelectedStock.value?.code === stock.code) {
-    favoriteChartOpen.value = !favoriteChartOpen.value
+    favoriteChartOpen.value = !favoriteChartOpen.value;
   } else {
-    favoriteSelectedStock.value = stock
-    favoriteChartOpen.value = true
+    favoriteSelectedStock.value = stock;
+    favoriteChartOpen.value = true;
   }
 }
 </script>
+
 
 <style scoped>
 .page-container {

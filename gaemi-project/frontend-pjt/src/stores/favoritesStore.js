@@ -1,20 +1,38 @@
 // src/stores/favoritesStore.js
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { defineStore } from "pinia";
 
-export const useFavoritesStore = defineStore('favorites', () => {
-  const favorites = ref([])
+export const useFavoritesStore = defineStore("favorites", {
+  state: () => ({
+    // ✔ 항상 종목 "코드"만 저장하는 방식!
+    favorites: [],
+  }),
 
-  function toggleFavorite(stock) {
-    const idx = favorites.value.findIndex((s) => s.code === stock.code)
-    if (idx === -1) favorites.value.push(stock)
-    else favorites.value.splice(idx, 1)
-  }
+  actions: {
+    // ⭐ 관심종목 토글 (코드 기반)
+    toggleFavorite(code) {
+      if (this.favorites.includes(code)) {
+        this.favorites = this.favorites.filter((c) => c !== code);
+      } else {
+        this.favorites.push(code);
+      }
+      this.saveToLocal();
+    },
 
-  // ⭐ 추가: 개별 종목 삭제
-  function removeFavorite(code) {
-    favorites.value = favorites.value.filter((item) => item.code !== code)
-  }
+    // ⭐ 관심종목 삭제
+    removeFavorite(code) {
+      this.favorites = this.favorites.filter((c) => c !== code);
+      this.saveToLocal();
+    },
 
-  return { favorites, toggleFavorite, removeFavorite }
-})
+    // ⭐ 로그인 시 로드
+    loadFavorites(list) {
+      this.favorites = [...list];
+    },
+
+    // ⭐ 로컬 저장
+    saveToLocal() {
+      localStorage.setItem("favorites", JSON.stringify(this.favorites));
+    },
+  },
+});
+

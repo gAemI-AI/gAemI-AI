@@ -1,26 +1,27 @@
 <!-- src/components/common/FavoriteButton.vue -->
 <template>
-  <button class="star-btn" @click="toggle">
+  <button class="star-btn" @click="toggleFavorite">
     <span :class="{ active: isFavorite }">★</span>
   </button>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useFavoritesStore } from '@/stores/favoritesStore.js'
+import { computed } from "vue";
+import { useFavoritesStore } from "@/stores/favoritesStore.js";
 
 const props = defineProps({
-  stock: { type: Object, required: true }
-})
+  stock: { type: Object, required: true },
+});
 
-const store = useFavoritesStore()
+const store = useFavoritesStore();
 
+// ✔ store는 코드 기반으로 저장하므로 코드 비교만 하면 됨!
 const isFavorite = computed(() =>
-  store.favorites.some((f) => f.code === props.stock.code)
-)
+  store.favorites.includes(props.stock.code)
+);
 
-function toggle() {
-  store.toggleFavorite(props.stock)
+function toggleFavorite() {
+  store.toggleFavorite(props.stock.code);
 }
 </script>
 

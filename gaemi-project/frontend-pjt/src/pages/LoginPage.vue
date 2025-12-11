@@ -1,151 +1,176 @@
 <template>
-  <div class="login-root">
-    <!-- 🔹 대시보드의 회색 박스(.main-content)와 동일한 폭 -->
-    <div class="login-shell">
-      <div class="login-card">
-        <!-- 로고 -->
-        <img src="@/assets/logo/gaemi.png" class="logo" alt="gAemI Logo" />
+  <div class="auth-page">
+    <div class="auth-card small">
+      <h1 class="title">로그인</h1>
+      <p class="subtitle">실시간 주가 모니터링 서비스</p>
 
-        <h2 class="title">gAemI 로그인</h2>
-        <p class="subtitle">소셜 계정으로 빠르게 로그인하세요</p>
-
-        <!-- 소셜 로그인 버튼 가로 배치 -->
-        <div class="social-row">
-          <button class="social-btn google" @click="login('google')">
-            <!-- 아이콘은 네가 쓰던 방식 그대로 써도 됨 (텍스트/이미지 자유) -->
-            <span class="icon">G</span>
-            Google 로그인
-          </button>
-
-          <button class="social-btn github" @click="login('github')">
-            <span class="icon">🐙</span>
-            GitHub 로그인
-          </button>
-
-          <button class="social-btn kakao" @click="login('kakao')">
-            <span class="icon">K</span>
-            Kakao 로그인
-          </button>
+      <form class="form" @submit.prevent="onSubmit">
+        <!-- 아이디 -->
+        <div class="field">
+          <label>아이디</label>
+          <input
+            v-model="form.username"
+            type="text"
+            placeholder="아이디"
+            required
+          />
         </div>
-      </div>
+
+        <!-- 비밀번호 -->
+        <div class="field">
+          <label>비밀번호</label>
+          <div class="input-row">
+            <input
+              :type="showPw ? 'text' : 'password'"
+              v-model="form.password"
+              placeholder="비밀번호"
+              required
+            />
+            <button type="button" class="ghost-btn" @click="showPw = !showPw">
+              보기
+            </button>
+          </div>
+        </div>
+
+        <button class="primary-btn">로그인</button>
+      </form>
+
+      <p class="footer-text">
+        계정이 없으신가요?
+        <span class="link" @click="goSignup">회원가입</span> |
+        <span class="link" @click="goWelcome">메인으로</span>
+      </p>
     </div>
   </div>
 </template>
 
 <script setup>
-function login(provider) {
-  // 백엔드 OAuth (지금 404 나는 건 정상)
-  window.location.href = `http://localhost:8000/api/auth/social/${provider}/login/`;
-}
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+const showPw = ref(false);
+
+const form = ref({
+  username: "",
+  password: "",
+});
+
+/* 임시 유저 데이터 - 회원가입 기능 연결 전까지 사용 */
+const mockUsers = [
+  { username: "gaemi", nickname: "개미봇", password: "1234" },
+  { username: "test", nickname: "주연", password: "1234" },
+];
+
+/* 로그인 */
+const onSubmit = () => {
+  const user = mockUsers.find(
+    (u) =>
+      u.username === form.value.username &&
+      u.password === form.value.password
+  );
+
+  if (!user) {
+    alert("아이디 또는 비밀번호가 올바르지 않습니다.");
+    return;
+  }
+
+  /* --------------------------
+      로그인 상태 저장 (중요)
+      MainLayout에서 읽기 위한 구조
+  ---------------------------*/
+  localStorage.setItem(
+    "user",
+    JSON.stringify({
+      username: user.username,
+      nickname: user.nickname,
+      isLogin: true,
+    })
+  );
+
+  alert("로그인 성공!");
+  router.push("/app/dashboard");
+};
+
+/* 이동 함수 */
+const goSignup = () => router.push("/signup");
+const goWelcome = () => router.push("/welcome");
 </script>
 
 <style scoped>
-/* 전체 배경 (레이아웃이 없는 페이지라서 여기서 배경 처리) */
-.login-root {
+/* 기존 디자인 그대로 */
+.auth-page {
+  width: 100%;
   min-height: 100vh;
-  background: #f5f6fa;
-}
-
-/* 🔹 대시보드의 .main-content와 똑같은 크기/정렬 */
-.login-shell {
-  width: 100%;
-  max-width: 1400px;     /* 👉 MainLayout.vue 의 .main-content 와 동일 */
-  margin: 0 auto;
-  padding: 20px 40px;
-
+  background: #f7f8fa;
   display: flex;
-  align-items: center;
   justify-content: center;
-
-  min-height: 100vh;     /* 세로 중앙 정렬 */
+  align-items: center;
 }
-
-/* 로그인 카드 */
-.login-card {
-  width: 100%;
-  max-width: 700px;
-  background: #ffffff;
-  padding: 40px 32px;
+.auth-card {
+  width: 420px;
+  background: white;
+  padding: 36px 40px;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
 }
-
-/* 로고 */
-.logo {
-  width: 72px;
-  height: 72px;
-  margin-bottom: 16px;
+.auth-card.small {
+  width: 380px;
 }
-
-/* 텍스트 */
 .title {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 700;
   margin-bottom: 4px;
 }
-
 .subtitle {
   font-size: 14px;
   color: #6b7280;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
-
-/* 소셜 버튼 가로 배치 */
-.social-row {
+.form {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  flex-direction: column;
+  gap: 20px;
 }
-
-/* 공통 버튼 스타일 */
-.social-btn {
-  flex: 1;
-  height: 48px;
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+input {
+  width: 100%;
+  padding: 10px 14px;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
+  border: 1px solid #d1d5db;
+}
+.input-row {
   display: flex;
-  align-items: center;
-  justify-content: center;
   gap: 8px;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: 0.1s;
 }
-
-.social-btn:hover {
-  background: #f3f4f6;
-}
-
-/* 아이콘 자리 (텍스트/이미지 뭐든 넣어도 됨) */
-.icon {
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-}
-
-/* 서비스별 색감 */
-.google {
-  border-color: #dadce0;
-}
-
-.github {
-  border-color: #1f2937;
-  background: #1f2937;
+.primary-btn {
+  width: 100%;
+  background: #2563eb;
   color: white;
+  padding: 12px 0;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
 }
-
-.github:hover {
-  background: #374151;
+.ghost-btn {
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: white;
+  font-size: 12px;
 }
-
-.kakao {
-  background: #fee500;
-  border-color: #fee500;
+.footer-text {
+  margin-top: 20px;
+  text-align: center;
+}
+.link {
+  color: #2563eb;
+  cursor: pointer;
+  font-weight: 600;
 }
 </style>
