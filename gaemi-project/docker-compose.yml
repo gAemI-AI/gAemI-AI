@@ -136,7 +136,11 @@ services:
 
    # 8. Flink JobManager
   flink-jobmanager:
-    image: flink:1.17.1-scala_2.12-java11
+    build:
+      context: ./data-pjt/flink
+      dockerfile: Dockerfile-flink
+    image: gaemi-flink-jobmanager:1.18
+    platform: linux/amd64  # 추가
     container_name: gaemi_flink_jobmanager
     ports:
       - "8081:8081"   # Flink Web UI
@@ -145,10 +149,18 @@ services:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
     depends_on:
       - kafka
+    volumes:
+      - ./data-pjt/flink-jobs:/opt/flink/usrlib/jobs
+      - ./data-pjt/flink/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar
+      - ./data-pjt/flink/kafka-clients-3.5.1.jar:/opt/flink/lib/kafka-clients-3.5.1.jar
    
   # 9. Flink TaskManager
   flink-taskmanager:
-    image: flink:1.17.1-scala_2.12-java11
+    build:
+      context: ./data-pjt/flink # JobMagaer랑 통일 / Job, Task Manager는 역할만 다르고 똑같은 소프트웨어 -> 둘 다 같은 파이썬 버전, 라이브러리, kafka 커넥트를 가지고 있어야함
+      dockerfile: Dockerfile-flink
+    platform: linux/amd64  # 추가
+    image: gaemi-flink-taskmanager:1.18
     container_name: gaemi_flink_taskmanager
     command: taskmanager
     environment:
@@ -156,9 +168,37 @@ services:
       - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=2
     depends_on:
       - flink-jobmanager
-   
+    volumes:
+      - ./data-pjt/flink-jobs:/opt/flink/usrlib/jobs # TaskManager도 코드를 알아야함 -> 볼륨 마운트 필수
+      - ./data-pjt/flink/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar
+      - ./data-pjt/flink/kafka-clients-3.5.1.jar:/opt/flink/lib/kafka-clients-3.5.1.jar
+
+  
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: gaemi_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.1
+    container_name: gaemi_kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
 # Docker가 관리할 볼륨 정의
 volumes:
   postgres_data:
   zookeeper_data:
   kafka_data:
+  esdata:
