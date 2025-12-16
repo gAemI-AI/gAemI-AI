@@ -5,6 +5,7 @@ from pyflink.common.watermark_strategy import WatermarkStrategy
 
 import json
 import requests
+import time
 
 
 def save_to_elasticsearch(record):
@@ -49,22 +50,28 @@ def run():
     env = StreamExecutionEnvironment.get_execution_environment()
     env.set_parallelism(1)
 
-    # # 꼭 필요
-    # env.add_jars(
-    #     "file:///opt/flink/lib/flink-connector-kafka-1.17.1.jar",
-    #     "file:///opt/flink/lib/kafka-clients-3.5.1.jar"
-    # )
-
-    # 데이터 수도꼭지 틀기
-    source = (
-        KafkaSource.builder()
-        .set_bootstrap_servers("kafka:29092")
-        .set_topics("stock-ticks")                       # ← topic 정확히 이 이름
-        .set_group_id("flink-stock-consumer-debug-1")    # ← 새 group id
-        .set_starting_offsets(KafkaOffsetsInitializer.earliest())  # ← 토픽 처음부터
-        .set_value_only_deserializer(SimpleStringSchema())
-        .build()
-    )
+    # Kafka 연결 재시도 로직
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            print(f"[KAFKA] 연결 시도 {attempt + 1}/{max_retries}")
+            source = (
+                KafkaSource.builder()
+                .set_bootstrap_servers("kafka:29092")
+                .set_topics("stock-ticks")                       # ← topic 정확히 이 이름
+                .set_group_id("flink-stock-consumer-debug-1")    # ← 새 group id
+                .set_starting_offsets(KafkaOffsetsInitializer.earliest())  # ← 토픽 처음부터
+                .set_value_only_deserializer(SimpleStringSchema())
+                .build()
+            )
+            print("[KAFKA] ✅ 연결 성공")
+            break
+        except Exception as e:
+            print(f"[KAFKA] ❌ 연결 실패: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(5)
+            else:
+                raise
 
     stream = env.from_source(
         source,
