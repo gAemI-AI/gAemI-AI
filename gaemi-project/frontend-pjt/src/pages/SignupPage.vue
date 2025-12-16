@@ -1,7 +1,7 @@
 <template>
   <div class="auth-wrapper">
     <div class="auth-card">
-
+      <img src="@/assets/logo/gaemi.png" class="auth-logo" />
       <h1 class="title">회원가입</h1>
 
       <!-- ========================= -->
@@ -505,5 +505,11 @@ input {
   color: #2563eb;
   cursor: pointer;
   font-weight: bold;
+}
+.auth-logo {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  display: block;
 }
 </style>
