@@ -42,7 +42,12 @@
       <AlertForm :stocks="favoriteStocks" @create="addAlert" />
 
       <!-- 활성 알림 리스트 -->
-      <AlertList :items="alerts" @remove="removeAlert" />
+      <AlertList
+        :items="alerts"
+        @remove="removeAlert"
+        @toggle="toggleAlert"
+      />
+
     </section>
 
   </div>
@@ -54,6 +59,10 @@ import { useFavoritesStore } from "@/stores/favoritesStore.js";
 
 import AlertForm from "@/components/alerts/AlertForm.vue";
 import AlertList from "@/components/alerts/AlertList.vue";
+
+import { onMounted } from "vue";
+import { useAlertsStore } from "@/stores/alertsStore.js";
+
 
 /* -------------------------------------------------- */
 /* Pinia 관심종목 store */
@@ -90,40 +99,68 @@ const favoriteCodes = computed(() => favoriteStocks.value.map((s) => s.code));
 /* -------------------------------------------------- */
 /* 활성 알림 리스트 */
 /* -------------------------------------------------- */
-const alerts = ref([]); // ⭐ 초기값 -> 0개
+const alertsStore = useAlertsStore();
+
+onMounted(() => {
+  alertsStore.loadFromLocal();
+});
+
+const alerts = computed(() => {
+  return alertsStore.alerts.map((a) => {
+    const stock = stocks.find((s) => s.code === a.stockCode);
+
+    return {
+      ...a,
+      stockName: stock?.name || a.stockName || a.stockCode,
+      // ✅ store에서 만든 description 그대로 사용 (덮어쓰지 않기)
+      description: a.description,
+    };
+  });
+});
+
+function toggleAlert(item) {
+  alertsStore.toggleAlert(item.id);
+}
+
 
 /* 삭제 */
 function removeFavorite(code) {
+  // 해당 종목에 연결된 알림이 있는지 확인
+  const hasAlerts = alertsStore.hasAlertsForStock(code);
+
+  if (hasAlerts) {
+    const ok = confirm(
+      "관심 종목을 삭제하면 해당 종목의 알림 조건도 함께 삭제됩니다.\n계속하시겠습니까?"
+    );
+    if (!ok) return;
+
+    alertsStore.removeByStockCode(code);
+  }
+
   store.removeFavorite(code);
 }
 
-/* 알림 추가 */
-// function addAlert(alert) {
-//   alerts.value.push({
-//     id: Date.now(),
-//     enabled: true,
-//     ...alert,
-//   });
-// }
 function addAlert(alert) {
-  const stockObj = favorites.value.find(
-    (item) => item.code === alert.stock
+  const stockObj = favoriteStocks.value.find(
+    s => s.code === alert.stock
   );
 
-  alerts.value.push({
-    id: Date.now(),
-    stock: alert.stock,
+  alertsStore.addAlert({
+    stockCode: alert.stock,
     stockName: stockObj?.name || "",
-    description: `${alert.condition === "gte" ? "이상" : "이하"}: ${alert.target}원`,
-    enabled: true,
+    condition: alert.condition,
+    target: alert.target,
   });
 }
 
 
+
+
 /* 알림 삭제 */
 function removeAlert(id) {
-  alerts.value = alerts.value.filter((a) => a.id !== id);
+  alertsStore.removeAlert(id);
 }
+
 </script>
 
 <style scoped>

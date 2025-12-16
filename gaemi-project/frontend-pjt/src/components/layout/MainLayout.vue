@@ -73,6 +73,15 @@
 import { RouterView, RouterLink, useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
 
+import { useFavoritesStore } from "@/stores/favoritesStore.js";
+
+const favoritesStore = useFavoritesStore();
+
+onMounted(() => {
+  favoritesStore.loadFromLocal();
+});
+
+
 const router = useRouter();
 const dropdownOpen = ref(false);
 const user = ref(null);
