@@ -190,7 +190,7 @@ services:
     command: taskmanager
     environment:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager # jobManager 명시
-      - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=2 # 동시에 처리할 작업 수
+      - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=4 # 동시에 처리할 작업 수
       - PYTHONPATH=/opt/flink/usrlib/jobs
     depends_on:
       - flink-jobmanager
@@ -233,7 +233,7 @@ services:
         echo '✅ JobManager 응답 확인' &&
         
         echo '[Submit] 1️⃣ 실시간 알림 Job 제출...' &&
-        /opt/flink/bin/flink run -m flink-jobmanager:8081 -d -py /opt/flink/usrlib/jobs/notification_processor_v2.py || echo '❌ Job 1 제출 실패' &&
+        /opt/flink/bin/flink run -m flink-jobmanager:8081 -d -py /opt/flink/usrlib/jobs/notification_processor.py || echo '❌ Job 1 제출 실패' &&
         sleep 5 &&
         
         echo '[Submit] 2️⃣ 뉴스 AI 분석 Job 제출...' &&
