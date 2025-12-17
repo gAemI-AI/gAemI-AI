@@ -6,7 +6,7 @@
         <img src="@/assets/logo/gaemi.png" class="logo-img" />
         <div class="logo-text">
           <div class="title">gAemI</div>
-          <div class="subtitle">실시간 종목 모니터링</div>
+          <div class="subtitle">시간 없는 개미를 위한 AI 투자 파트너</div>
         </div>
       </div>
 
@@ -72,6 +72,15 @@
 <script setup>
 import { RouterView, RouterLink, useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
+
+import { useFavoritesStore } from "@/stores/favoritesStore.js";
+
+const favoritesStore = useFavoritesStore();
+
+onMounted(() => {
+  favoritesStore.loadFromLocal();
+});
+
 
 const router = useRouter();
 const dropdownOpen = ref(false);

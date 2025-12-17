@@ -3,11 +3,13 @@
   <div class="welcome-page">
     <div class="content-area">
       <main class="hero-section">
-        <p class="hero-subtitle">환영합니다!</p>
-        <h1 class="hero-title">
-          실시간 주가 모니터링과 AI 뉴스 분석으로<br />
-          스마트한 투자를 시작하세요
-        </h1>
+        <!-- 로고 -->
+        <img src="@/assets/logo/gaemi.png" class="hero-logo" />
+        <h1 class="hero-title">시간 없는 개미를 위한 AI 투자 파트너</h1>
+        <p class="hero-desc">
+          주가는 gAemI가 보고, 판단은 당신이 합니다
+        </p>
+        <br></br>
 
         <div class="hero-actions">
           <button class="primary-btn" @click="goSignup">처음이신가요?</button>
@@ -49,7 +51,7 @@ const goLogin = () => router.push('/login')
 /* 바깥 흰 배경 */
 .welcome-page {
   min-height: 100vh;
-  background: #ffffff;
+  background: #f5f6fa;
   display: flex;
   justify-content: center;
 }
@@ -59,7 +61,6 @@ const goLogin = () => router.push('/login')
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  background: #f5f6fa;
   min-height: 100vh;
   padding: 40px 40px;
   box-sizing: border-box;
@@ -171,4 +172,15 @@ const goLogin = () => router.push('/login')
   color: #6b7280;
   line-height: 1.5;
 }
+
+.hero-desc {
+  font-size: 14px;
+  color: gray;
+}
+.hero-logo {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 16px;
+}
+
 </style>

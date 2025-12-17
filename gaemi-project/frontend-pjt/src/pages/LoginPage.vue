@@ -1,8 +1,9 @@
 <template>
   <div class="auth-page">
     <div class="auth-card small">
+      <img src="@/assets/logo/gaemi.png" class="auth-logo" />
       <h1 class="title">로그인</h1>
-      <p class="subtitle">실시간 주가 모니터링 서비스</p>
+      <p class="subtitle">시간 없는 개미를 위한 AI 투자 파트너</p>
 
       <form class="form" @submit.prevent="onSubmit">
         <!-- 아이디 -->
@@ -17,20 +18,25 @@
         </div>
 
         <!-- 비밀번호 -->
-        <div class="field">
-          <label>비밀번호</label>
-          <div class="input-row">
-            <input
-              :type="showPw ? 'text' : 'password'"
-              v-model="form.password"
-              placeholder="비밀번호"
-              required
+        <div class="input-row">
+          <input
+            :type="showPw ? 'text' : 'password'"
+            v-model="form.password"
+            placeholder="비밀번호"
+            required
+          />
+          <button
+            type="button"
+            class="icon-btn"
+            @click="showPw = !showPw"
+          >
+            <img
+              :src="showPw ? eyeClosed : eyeOpen"
+              class="eye-icon"
             />
-            <button type="button" class="ghost-btn" @click="showPw = !showPw">
-              보기
-            </button>
-          </div>
+          </button>
         </div>
+
 
         <button class="primary-btn">로그인</button>
       </form>
@@ -48,6 +54,29 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 
+import eyeOpen from "@/assets/icons/eye-open.png";
+import eyeClosed from "@/assets/icons/eye-closed.png";
+
+import { watch } from "vue";
+
+/* 한글 → 영문 매핑 */
+const hangulToEngMap = {
+  'ㅂ':'q','ㅈ':'w','ㄷ':'e','ㄱ':'r','ㅅ':'t',
+  'ㅛ':'y','ㅕ':'u','ㅑ':'i','ㅐ':'o','ㅔ':'p',
+  'ㅁ':'a','ㄴ':'s','ㅇ':'d','ㄹ':'f','ㅎ':'g',
+  'ㅗ':'h','ㅓ':'j','ㅏ':'k','ㅣ':'l',
+  'ㅋ':'z','ㅌ':'x','ㅊ':'c','ㅍ':'v','ㅠ':'b',
+  'ㅜ':'n','ㅡ':'m'
+};
+
+function convertHangulToEng(input) {
+  return input
+    .split("")
+    .map(ch => hangulToEngMap[ch] || ch)
+    .join("");
+}
+
+
 const router = useRouter();
 const showPw = ref(false);
 
@@ -56,6 +85,15 @@ const form = ref({
   password: "",
 });
 
+watch(
+  () => form.value.password,
+  (val) => {
+    const converted = convertHangulToEng(val || "");
+    if (converted !== val) {
+      form.value.password = converted;
+    }
+  }
+);
 /* 임시 유저 데이터 - 회원가입 기능 연결 전까지 사용 */
 const mockUsers = [
   { username: "gaemi", nickname: "개미봇", password: "1234" },
@@ -145,8 +183,9 @@ input {
   border: 1px solid #d1d5db;
 }
 .input-row {
+  position: relative;
   display: flex;
-  gap: 8px;
+  align-items: center;
 }
 .primary-btn {
   width: 100%;
@@ -157,13 +196,6 @@ input {
   border: none;
   font-weight: 600;
 }
-.ghost-btn {
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  background: white;
-  font-size: 12px;
-}
 .footer-text {
   margin-top: 20px;
   text-align: center;
@@ -173,4 +205,24 @@ input {
   cursor: pointer;
   font-weight: 600;
 }
+.icon-btn {
+  position: absolute;
+  right: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.eye-icon {
+  width: 20px;
+  height: 20px;
+}
+.auth-logo {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  display: block;
+}
+
 </style>

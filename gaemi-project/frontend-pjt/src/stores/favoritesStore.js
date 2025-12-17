@@ -8,6 +8,13 @@ export const useFavoritesStore = defineStore("favorites", {
   }),
 
   actions: {
+    loadFromLocal() {
+      const saved = localStorage.getItem("favorites");
+      if (saved) {
+        this.favorites = JSON.parse(saved);
+      }
+    },
+
     // ⭐ 관심종목 토글 (코드 기반)
     toggleFavorite(code) {
       if (this.favorites.includes(code)) {
