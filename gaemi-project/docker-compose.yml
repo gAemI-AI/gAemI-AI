@@ -38,6 +38,8 @@ services:
       - POSTGRES_USER=gaemi
       - POSTGRES_PASSWORD=gaemigaemi11
       - POSTGRES_HOST=db
+    env_file:
+      - ./backend-pjt/.env
     depends_on:
       db:
         condition: service_healthy # DB 켜짐 + 접속 가능 상태까지 대기 후 실행

@@ -31,4 +31,7 @@ urlpatterns = [
 
     # 4. 알림 API 연결
     path('api/v1/notifications/', include('notifications.urls')),
+
+    # 5. chatbot 연결
+    path('api/chatbot/', include('chatbot.urls')), #  /api/chatbot/ask/ 로 요청
 ]

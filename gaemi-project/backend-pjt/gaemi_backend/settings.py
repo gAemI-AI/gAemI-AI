@@ -26,8 +26,13 @@ SECRET_KEY = 'django-insecure-1p*bp%mz1mo*(x3203ewtbnaa#awo0vq(!!m%_gdp2rs!r*pjk
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*'] # 테스트 or 개발 목적으로 일시적으로 설정 변경
-
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "backend",   # Docker 내부 통신용
+    "0.0.0.0",
+    "*"          # 최후의 수단
+]
 
 # Application definition
 
@@ -43,11 +48,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # 'django_elasticsearch_dsl', # ORM과 연동할 때 필요
+
     # My apps
     'users',
     'stocks',
     'watchlist',
-    'notifications'
+    'notifications',
+    'chatbot'
 ]
 
 
@@ -96,6 +104,19 @@ DATABASES = {
     }
 }
 
+# Elasticsearch 설정 추가 (RAG 검색용)
+# Docker 내부 통신이므로 서비스명 'elasticsearch'를 사용
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'http://elasticsearch:9200'
+    },
+}
+
+#  OpenAI API Key 설정 추가 (GPT 호출용)
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+
+# SSAFY GMS 전용 Base URL
+OPENAI_BASE_URL = "https://gms.ssafy.io/gmsapi/api.openai.com/v1"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

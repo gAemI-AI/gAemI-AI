@@ -6,3 +6,9 @@ djangorestframework-simplejwt
 
 requests>=2.32.3
 cryptography>=43.0.0
+
+django-cors-headers  # 프론트엔드 통신용
+djangorestframework
+elasticsearch-dsl    # ES 통신용 (공식 라이브러리)
+openai               # GPT 호출용
+elasticsearch
