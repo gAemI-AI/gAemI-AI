@@ -7,10 +7,9 @@ RUN apt-get update --fix-missing && \
     apt-get install -y --fix-missing python3 python3-pip && \
     ln -s /usr/bin/python3 /usr/bin/python
 
-# 2. PyFlink 및 필요한 라이브러리 설치 (문법 수정됨)
-# 한 줄로 이어지도록 && \ 를 사용하여 연결했습니다.
+# 2. PyFlink 및 필요한 라이브러리 설치
 RUN python3 -m pip install --upgrade pip && \
-    python3 -m pip install "apache-flink==1.18.1" requests protobuf beautifulsoup4 openai tiktoken
+    python3 -m pip install "apache-flink==1.18.1" requests protobuf beautifulsoup4 openai tiktoken psycopg2-binary
     
 WORKDIR /opt/flink
 
