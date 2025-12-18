@@ -55,7 +55,9 @@ INSTALLED_APPS = [
     'stocks',
     'watchlist',
     'notifications',
-    'chatbot'
+    'chatbot',
+
+    'drf_yasg' # API 명세 페이지
 ]
 
 
