@@ -16,6 +16,25 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework import permissions
+
+# 🌟 Swagger 관련 임포트
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+# 🌟 Swagger 정보 설정
+schema_view = get_schema_view(
+   openapi.Info(
+      title="gAemI-AI API",
+      default_version='v1',
+      description="gAemi-AI 프로젝트 API 명세서입니다.",
+      terms_of_service="https://www.google.com/policies/terms/",
+      contact=openapi.Contact(email="contact@gaemi.ai"),
+      license=openapi.License(name="BSD License"),
+   ),
+   public=True,
+   permission_classes=[permissions.AllowAny],
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -28,10 +47,16 @@ urlpatterns = [
 
     # 3. 관심 종목 API
     path('api/v1/watchlist/', include('watchlist.urls')),
-
+    
     # 4. 알림 API 연결
     path('api/v1/notifications/', include('notifications.urls')),
 
     # 5. chatbot 연결
-    path('api/chatbot/', include('chatbot.urls')), #  /api/chatbot/ask/ 로 요청
+    path('api/v1/chatbot/', include('chatbot.urls')), #  /api/chatbot/ask/ 로 요청
+
+    # ------------- Swagger URL 연결 ------------- #
+    path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    # ------------------------------------------ #
 ]
