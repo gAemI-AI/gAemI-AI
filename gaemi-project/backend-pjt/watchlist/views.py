@@ -52,7 +52,7 @@ class WatchlistListCreateView(generics.ListCreateAPIView):
                 },
                 "aggs": {
                     "by_stock": {
-                        "terms": {"field": "stock_code", "size": 100},  # stock_code 기준으로 bucket 생성 (최대 100 종목까지만 가능하도록 설정)
+                        "terms": {"field": "stock_code.keyword", "size": 100},  # stock_code 기준으로 bucket 생성 (최대 100 종목까지만 가능하도록 설정)
                         "aggs": {
                             "latest_price": {
                                 "top_hits": { # 각 bucket 안에서 실제 문서를 다시 가져오는 집계(가장 최신 것만 가져오기 위해)

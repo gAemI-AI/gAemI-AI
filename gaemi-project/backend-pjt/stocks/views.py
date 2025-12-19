@@ -9,6 +9,10 @@ from django.conf import settings
 from elasticsearch import Elasticsearch
 from datetime import datetime, timedelta
 from rest_framework import filters
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from elasticsearch import Elasticsearch
 
 # 주식 목록 조회 전용 뷰 (GET)
 class StockListView(generics.ListAPIView):
@@ -145,4 +149,64 @@ class StockChartView(APIView):
 
         except Exception as e:
             print(f"Chart Error: {e}")
+            return Response([], status=status.HTTP_200_OK)
+        
+# 여러 지수의 최신 상태 조회
+class MarketIndexView(APIView):
+    permission_classes = [AllowAny]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.es = Elasticsearch(
+            hosts=[{'host': 'elasticsearch', 'port': 9200, 'scheme': 'http'}]
+        )
+
+    def get(self, request):
+        # Elasticsearch 쿼리: 각 지수(symbol)별로 최신 데이터 1개씩 가져오기
+        query_body = {
+            "size": 0,  # 전체 목록은 필요 없고 집계 결과만 필요함
+            "aggs": {
+                "indices": {
+                    "terms": { 
+                        "field": "symbol",  # KOSPI, KOSDAQ 등으로 그룹핑
+                        "size": 10 
+                    },
+                    "aggs": {
+                        "latest_data": {
+                            "top_hits": {
+                                "sort": [{"timestamp": "desc"}], # 최신순 정렬
+                                "size": 1,
+                                "_source": ["symbol", "current_price", "diff", "rate"] # 필요한 필드만
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        try:
+            # 데이터가 없다면 빈 리스트 반환
+            if not self.es.indices.exists(index="index-ticks"):
+                return Response([], status=status.HTTP_200_OK)
+
+            response = self.es.search(index="index-ticks", body=query_body)
+            buckets = response['aggregations']['indices']['buckets']
+
+            result = []
+            for bucket in buckets:
+                hits = bucket['latest_data']['hits']['hits']
+                if hits:
+                    source = hits[0]['_source']
+                    result.append({
+                        "name": source.get('symbol'),
+                        "price": source.get('current_price'),
+                        "diff": source.get('diff'),
+                        "rate": source.get('rate')
+                    })
+
+            return Response(result, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"Market Index Error: {e}")
+            # 에러 발생 시 빈 배열 반환하여 프론트 터짐 방지
             return Response([], status=status.HTTP_200_OK)

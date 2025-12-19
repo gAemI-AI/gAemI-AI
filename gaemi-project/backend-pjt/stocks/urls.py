@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import StockListView
 from .views import StockListView, StockChartView # StockChartView 임포트
+from .views import StockListView, StockChartView, MarketIndexView 
 
 urlpatterns = [
     # GET / api/v1/stocks/ 주소로 요청오면 -> StockListView가 처리
@@ -8,4 +9,7 @@ urlpatterns = [
 
     # 차트 데이터 API: (예) /api/v1/stocks/005930/chart/
     path('<str:stock_code>/chart/', StockChartView.as_view(), name='stock_chart'),
+
+    # 시장 지수 API
+    path('market-index/', MarketIndexView.as_view(), name='market-index'),
 ]
