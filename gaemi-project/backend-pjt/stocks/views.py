@@ -8,6 +8,7 @@ from rest_framework import status
 from django.conf import settings
 from elasticsearch import Elasticsearch
 from datetime import datetime, timedelta
+from rest_framework import filters
 
 # 주식 목록 조회 전용 뷰 (GET)
 class StockListView(generics.ListAPIView):
@@ -19,6 +20,10 @@ class StockListView(generics.ListAPIView):
 
     # 3. 누구에게 보여줄건지 -> 로그인한 사람에게만
     permission_classes = [AllowAny] # 모두에게 보여주려면 AllowAny으로 바꾸면 됨!
+
+    # 4. 검색 기능 활성화
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['stock_name', 'stock_id', 'market_type']
 
 # 주식 차트 데이터 조회 API (OHLC Aggregation)
 #   - ES의 주식 틱 데이터를 조회하여 지정된 시간 간격으로 집계한 캔들 데이터를 반환
