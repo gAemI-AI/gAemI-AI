@@ -23,13 +23,22 @@
             대시보드
           </RouterLink>
 
-          <RouterLink
+          <!-- <RouterLink
             to="/app/ai-news"
             class="tab"
             :class="{ active: $route.path.startsWith('/app/ai-news') }"
           >
             AI 뉴스 분석
+          </RouterLink> -->
+          
+          <RouterLink
+            to="/app/chatbot"
+            class="tab"
+            :class="{ active: $route.path.startsWith('/app/chatbot') }"
+          >
+            AI 챗봇
           </RouterLink>
+
 
           <RouterLink
             to="/app/alerts"
@@ -74,8 +83,8 @@
          전역 UI (layout-root 밖)
     ========================== -->
     <ToastStack v-if="toastStore.toasts.length > 0" />
-    <ChatbotFab v-if="!chatbotStore.isOpen" />
-    <ChatbotPanel v-show="chatbotStore.isOpen" />
+    <ChatbotFab />
+    <ChatbotPanel v-if="chatbotStore.isOpen" />
 
 </template>
 

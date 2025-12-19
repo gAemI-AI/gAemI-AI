@@ -14,9 +14,15 @@ import { useChatbotStore } from "@/stores/chatbotStore";
  */
 const chatbotStore = useChatbotStore();
 
+// const openChat = () => {
+//   chatbotStore.openChat();
+// };
 const openChat = () => {
-  chatbotStore.openChat();
+  console.log("FAB CLICK");
+  chatbotStore.open();
+  console.log("isOpen:", chatbotStore.isOpen);
 };
+
 </script>
 
 <style scoped>

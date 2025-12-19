@@ -512,4 +512,11 @@ input {
   margin: 0 auto 12px;
   display: block;
 }
+/* 🔧 input 깨짐 방지 핵심 패치 */
+.input-row input,
+.input {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 </style>

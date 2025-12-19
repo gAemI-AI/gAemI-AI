@@ -10,6 +10,7 @@ import SignupPage from "@/pages/SignupPage.vue";
 import DashboardPage from "@/pages/DashboardPage.vue";
 import AiNewsPage from "@/pages/AiNewsPage.vue";
 import AlertSettingsPage from "@/pages/AlertSettingsPage.vue";
+import ChatbotPage from "@/pages/ChatbotPage.vue";
 
 const routes = [
   // ✅ 시작 페이지
@@ -32,6 +33,7 @@ const routes = [
       { path: "dashboard", component: DashboardPage },
       { path: "ai-news", component: AiNewsPage },
       { path: "alerts", component: AlertSettingsPage },
+      { path: "/app/chatbot", component: ChatbotPage, },
     ],
   },
 ];

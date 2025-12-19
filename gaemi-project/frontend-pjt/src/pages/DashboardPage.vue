@@ -6,7 +6,9 @@
     <!-- 🔍 검색창 -->
     <!-- --------------------------------------- -->
     <section class="left-column">
-      <StockSearchBar @search="onSearch" />
+      <div class='search-bar-wrapper'>
+        <StockSearchBar @search="onSearch" />
+      </div>
 
       <!-- 🔎 검색 결과 -->
       <div v-if="searchKeyword" class="search-results">
@@ -53,7 +55,8 @@
     <!-- 오른쪽 알림 패널 -->
     <!-- --------------------------------------- -->
     <aside class="right-column">
-      <AlertHistoryList :alerts="alerts" />
+      <MarketSummaryPanel />
+      <AlertHistoryList :alerts="alertsStore.alertEvents" />
     </aside>
 
   </div>
@@ -62,33 +65,36 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useFavoritesStore } from "@/stores/favoritesStore.js";
+import { useAlertsStore } from "@/stores/alertsStore";
 
 import StockSearchBar from "@/components/dashboard/StockSearchBar.vue";
 import StockTickerRow from "@/components/dashboard/StockTickerRow.vue";
 import StockDetailCard from "@/components/dashboard/StockDetailCard.vue";
 import AlertHistoryList from "@/components/dashboard/AlertHistoryList.vue";
 import FavoriteButton from "@/components/common/FavoriteButton.vue";
+import MarketSummaryPanel from "@/components/dashboard/MarketSummaryPanel.vue";
 
 /* Pinia Store */
 const store = useFavoritesStore();
 
-// 🔔 더미 알림 데이터 추가
-const alerts = ref([
-  {
-    id: 1,
-    statusClass: "working",
-    stockName: "삼성전자",
-    title: "목표가 도달했습니다.",
-    time: "10:32",
-  },
-  {
-    id: 2,
-    statusClass: "done",
-    stockName: "NAVER",
-    title: "지정가 이하로 하락했습니다.",
-    time: "09:15",
-  },
-]);
+// // 🔔 더미 알림 데이터 추가
+// const alerts = ref([
+//   {
+//     id: 1,
+//     statusClass: "working",
+//     stockName: "삼성전자",
+//     title: "목표가 도달했습니다.",
+//     time: "10:32",
+//   },
+//   {
+//     id: 2,
+//     statusClass: "done",
+//     stockName: "NAVER",
+//     title: "지정가 이하로 하락했습니다.",
+//     time: "09:15",
+//   },
+// ]);
+const alertsStore = useAlertsStore();
 
 /* ------------------------------- */
 /* 로그인 유저 관심종목 불러오기   */
@@ -170,12 +176,13 @@ function onSelectFromFavorite(stock) {
 }
 </script>
 
-
 <style scoped>
 .page-container {
   width: 100%;
   display: grid;
-  grid-template-columns: 3fr 1.2fr;
+
+  /* 🔧 핵심: grid overflow 방지 */
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1.2fr);
   gap: 20px;
 }
 
@@ -184,21 +191,45 @@ function onSelectFromFavorite(stock) {
   flex-direction: column;
 }
 
+.right-column {
+  margin-left: 24px;
+  min-width: 0;
+
+  /* ⭐ 추가 */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  /* 오른쪽 컬럼 자체는 스크롤 ❌ */
+  height: calc(100vh - 64px - 40px); 
+}
+
+
+/* 🔍 검색 결과 */
 .search-results {
-  margin-top: 16px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
+/* ⭐ 관심종목 영역 */
 .favorite-section {
-  margin-top: 24px;
+  margin-top: 8px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
+/* 📈 차트 카드 */
 .chart-box {
   margin-top: 24px;
   padding: 24px;
   width: 100%;
+  max-width: 100%;
   background: white;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
+  box-sizing: border-box;
 }
 
 .chart-header {
@@ -208,13 +239,14 @@ function onSelectFromFavorite(stock) {
   margin-bottom: 12px;
 }
 
-.right-column {
-  min-width: 280px;
-}
-
+/* 📱 반응형 */
 @media (max-width: 1024px) {
   .page-container {
     grid-template-columns: 1fr;
   }
 }
+.search-bar-wrapper {
+  margin-bottom: 8px; /* ← 여기서 간격 조절 */
+}
+
 </style>

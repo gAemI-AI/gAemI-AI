@@ -29,7 +29,7 @@ import AiChatWidget from "@/components/chat/AiChatWidget.vue";
 const chatbotStore = useChatbotStore();
 
 const closeChat = () => {
-  chatbotStore.closeChat();
+  chatbotStore.close();
 };
 </script>
 
