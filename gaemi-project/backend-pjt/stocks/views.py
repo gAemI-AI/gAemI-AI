@@ -151,32 +151,43 @@ class StockChartView(APIView):
             print(f"Chart Error: {e}")
             return Response([], status=status.HTTP_200_OK)
         
-# 여러 지수의 최신 상태 조회
+# 메인 대시보드용 시장 지수(KOSPI, KOSDAQ 등) 조회 API
 class MarketIndexView(APIView):
     permission_classes = [AllowAny]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        
+        # Docker 내부 통신용 ES 주소
         self.es = Elasticsearch(
             hosts=[{'host': 'elasticsearch', 'port': 9200, 'scheme': 'http'}]
         )
+        
+        # 데이터 코드 -> 화면 표시 이름 매핑
+        self.INDEX_MAP = {
+            "0001": "KOSPI",
+            "1001": "KOSDAQ",
+            "2001": "KOSPI200"
+        }
 
     def get(self, request):
-        # Elasticsearch 쿼리: 각 지수(symbol)별로 최신 데이터 1개씩 가져오기
+        # 1. ES Aggregation 쿼리
+        # - index_code별로 그룹핑하여 가장 최신(timestamp desc) 데이터 1개만 가져옴
         query_body = {
-            "size": 0,  # 전체 목록은 필요 없고 집계 결과만 필요함
+            "size": 0,
             "aggs": {
                 "indices": {
+                    # Consumer에서 mapping한 대로 .keyword 필드 사용 필수
                     "terms": { 
-                        "field": "symbol",  # KOSPI, KOSDAQ 등으로 그룹핑
-                        "size": 10 
+                        "field": "index_code.keyword", 
+                        "size": 10 # 현재는 3개이지만 확장 대비로 10개
                     },
                     "aggs": {
                         "latest_data": {
                             "top_hits": {
-                                "sort": [{"timestamp": "desc"}], # 최신순 정렬
+                                "sort": [{"timestamp": "desc"}],
                                 "size": 1,
-                                "_source": ["symbol", "current_price", "diff", "rate"] # 필요한 필드만
+                                "_source": ["index_code", "current_value", "change_value", "change_rate"]
                             }
                         }
                     }
@@ -185,7 +196,7 @@ class MarketIndexView(APIView):
         }
 
         try:
-            # 데이터가 없다면 빈 리스트 반환
+            # 인덱스가 아직 생성되지 않았을 경우 (Consumer 실행 전) 방어 코드
             if not self.es.indices.exists(index="index-ticks"):
                 return Response([], status=status.HTTP_200_OK)
 
@@ -197,16 +208,25 @@ class MarketIndexView(APIView):
                 hits = bucket['latest_data']['hits']['hits']
                 if hits:
                     source = hits[0]['_source']
+                    raw_code = source.get('index_code')
+                    
+                    # 2. 데이터 변환 (Backend -> Frontend 규격 맞춤)
+                    display_name = self.INDEX_MAP.get(raw_code, raw_code) # 매핑 없으면 코드 그대로 출력
+                    
                     result.append({
-                        "name": source.get('symbol'),
-                        "price": source.get('current_price'),
-                        "diff": source.get('diff'),
-                        "rate": source.get('rate')
+                        "name": display_name,                 # 예: "KOSPI"
+                        "price": source.get('current_value'), # 예: 2500.50
+                        "diff": source.get('change_value'),   # 예: -15.2
+                        "rate": source.get('change_rate')     # 예: -0.6
                     })
+
+            # 3. 화면 표시 순서 정렬 (KOSPI -> KOSDAQ -> 나머지)
+            order_priority = {"KOSPI": 1, "KOSDAQ": 2, "KOSPI200": 3}
+            result.sort(key=lambda x: order_priority.get(x['name'], 99))
 
             return Response(result, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(f"Market Index Error: {e}")
-            # 에러 발생 시 빈 배열 반환하여 프론트 터짐 방지
+            print(f"🚨 Market Index Error: {e}")
+            # 에러 발생 시 500 대신 빈 배열 반환 (프론트엔드 보호)
             return Response([], status=status.HTTP_200_OK)

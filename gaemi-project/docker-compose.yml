@@ -275,6 +275,23 @@ services:
     depends_on:
       - elasticsearch
 
+  # 14. 시간 장소 Consumer (Kafka -> ES)
+  consumer-index:
+    build:
+      context: ./data-pjt/consumer-index
+    container_name: gaemi_consumer_index
+    environment:
+      - KAFKA_BROKER=kafka:29092
+      - TOPIC_NAME=index-ticks
+      - ES_HOST=http://elasticsearch:9200
+      - ES_INDEX=index-ticks
+    depends_on:
+      kafka:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+    restart: on-failure
+
 # 볼륨 정의: 컨테이너가 꺼져도 사라지지 않는 외장하드
 volumes:
   postgres_data: # DB 데이터 저장
