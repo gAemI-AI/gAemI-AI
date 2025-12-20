@@ -227,6 +227,14 @@ onMounted(() => {
   const saved = localStorage.getItem("user");
   if (saved) user.value = JSON.parse(saved);
 
+  chatbotStore.loadFromLocal();
+
+  if (
+    chatbotStore.messages.length > 0 &&
+    route.path.startsWith("/app/chatbot")
+  ) {
+    chatbotStore.isOpen = true;
+  }
   // ✅ 로그인 후 들어왔을 때: "쌓인 알림" 토스트로 한번에 처리
   flushUnshownEvents();
 });

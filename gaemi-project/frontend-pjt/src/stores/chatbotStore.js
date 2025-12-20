@@ -1,10 +1,15 @@
 // src/stores/chatbotStore.js
 import { defineStore } from "pinia";
 
+const STORAGE_KEYS = {
+  OPEN: "chatbot_open",
+  MESSAGES: "chatbot_messages",
+};
+
 export const useChatbotStore = defineStore("chatbot", {
   state: () => ({
     // 우측 하단 패널 열림/닫힘
-    isOpen: false,
+    isOpen: localStorage.getItem(STORAGE_KEYS.OPEN) === 'true',
 
     // ✅ 우측 하단 챗봇 + ChatbotPage가 "같이" 쓰는 대화 기록
     // role: "user" | "assistant" | "system"
@@ -28,9 +33,20 @@ export const useChatbotStore = defineStore("chatbot", {
     /* -----------------------
        Panel/Page 공통 제어
     ------------------------ */
+    init() {
+      this.loadFromLocal();
+
+      // 챗봇이 열려있던 상태 + 메시지 없음 → 안내 메시지 복원
+      if (this.isOpen && this.messages.length === 0) {
+        this.addSystemMessage(
+          "안녕하세요 👋\n관심 종목, 실적, 뉴스 요약 등 무엇이든 물어보세요."
+        );
+      }
+    },
+
     open() {
       this.isOpen = true;
-
+      localStorage.setItem(STORAGE_KEYS.OPEN, "true");
       // ✅ 처음 열릴 때만 안내 메시지 추가
       if (this.messages.length === 0) {
         this.addSystemMessage(
@@ -40,9 +56,11 @@ export const useChatbotStore = defineStore("chatbot", {
     },
     close() {
       this.isOpen = false;
+      localStorage.setItem(STORAGE_KEYS.OPEN, "false");
     },
+
     toggle() {
-      this.isOpen = !this.isOpen;
+      this.isOpen ? this.close() : this.open();
     },
 
     /* -----------------------
@@ -60,6 +78,9 @@ export const useChatbotStore = defineStore("chatbot", {
         createdAt: new Date().toISOString(),
         ...meta,
       });
+
+      // 메시지 추가될 때마다 저장
+      this.saveToLocal();
     },
 
     addUserMessage(text, meta) {
@@ -87,19 +108,20 @@ export const useChatbotStore = defineStore("chatbot", {
     ------------------------ */
     loadFromLocal() {
       try {
-        const raw = localStorage.getItem("chatbot_messages");
+        const raw = localStorage.getItem(STORAGE_KEYS.MESSAGES);
         if (!raw) return;
+
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) this.messages = parsed;
-      } catch (e) {
+      } catch {
         // 파싱 실패 시 무시
       }
     },
 
     saveToLocal() {
       try {
-        localStorage.setItem("chatbot_messages", JSON.stringify(this.messages));
-      } catch (e) {
+        localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(this.messages));
+      } catch {
         // 저장 실패 시 무시
       }
     },
@@ -127,10 +149,7 @@ export const useChatbotStore = defineStore("chatbot", {
         // 임시 mock 응답
         await new Promise((r) => setTimeout(r, 250));
         this.addAssistantMessage(`(임시응답) "${userText}"에 대한 답변입니다.`);
-
-        // 저장(원하면)
-        this.saveToLocal();
-      } catch (e) {
+      } catch {
         this.lastError = "챗봇 응답에 실패했습니다.";
       } finally {
         this.isLoading = false;
