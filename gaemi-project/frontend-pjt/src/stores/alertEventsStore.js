@@ -1,7 +1,6 @@
 // src/stores/alertEventsStore.js
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import { useToastStore } from "@/stores/toastStore";
 
 export const useAlertEventsStore = defineStore("alertEvents", () => {
   /* ------------------------
@@ -33,7 +32,11 @@ export const useAlertEventsStore = defineStore("alertEvents", () => {
 
     try {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) events.value = parsed;
+      if (Array.isArray(parsed)) {
+        events.value = parsed;
+        cleanupOldEvents();
+        saveToLocal();
+      }
     } catch (e) {
       // 파싱 실패 시 무시
     }
@@ -41,6 +44,19 @@ export const useAlertEventsStore = defineStore("alertEvents", () => {
 
   // ⭐ 새로고침 유지
   loadFromLocal();
+
+  const RETENTION_DAYS = 7;
+
+  function cleanupOldEvents() {
+    const now = new Date();
+    const cutoff = new Date(
+      now.getTime() - RETENTION_DAYS * 24 * 60 * 60 * 1000
+    );
+
+    events.value = events.value.filter(ev => {
+      return new Date(ev.triggeredAt) >= cutoff;
+    });
+  }
 
   /* ------------------------
      Actions
@@ -70,15 +86,8 @@ export const useAlertEventsStore = defineStore("alertEvents", () => {
 
     // 1️⃣ 이벤트 저장
     events.value.push(alertEvent);
+    cleanupOldEvents();
     saveToLocal();
-
-    // 2️⃣ 토스트 발생 (🔥 여기서만)
-    const toastStore = useToastStore();
-    toastStore.push({
-      type: "info",
-      title: "알림 도착",
-      message: `${alertEvent.stockName} ${alertEvent.target}원 조건 충족`,
-    });
   }
 
   function clearEvents() {

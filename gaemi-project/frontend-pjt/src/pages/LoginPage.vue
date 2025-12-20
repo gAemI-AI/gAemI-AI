@@ -63,6 +63,10 @@ import { useRouter } from "vue-router";
 
 import eyeOpen from "@/assets/icons/eye-open.png";
 import eyeClosed from "@/assets/icons/eye-closed.png";
+import { useAlertEventsStore } from "@/stores/alertEventsStore";
+
+const alertEventsStore = useAlertEventsStore();
+
 
 const router = useRouter();
 const showPw = ref(false);
@@ -118,6 +122,67 @@ const onSubmit = () => {
       isLogin: true,
     })
   );
+
+  // ===============================
+  // 🔔 [임시] 로그인 시 서버에서 내려온 알림 이벤트 mock
+  // - 나중에 WebSocket / API로 대체될 부분
+  // ===============================
+  const mockAlertEvents = [
+    {
+      stockCode: "005930",
+      stockName: "삼성전자",
+      condition: "gte",
+      target: 80000,
+      currentPrice: 80100,
+      triggeredAt: "2025-12-16T09:01:00",
+    },
+    {
+      stockCode: "000660",
+      stockName: "SK하이닉스",
+      condition: "gte",
+      target: 150000,
+      currentPrice: 151200,
+      triggeredAt: "2025-12-16T09:02:00",
+    },
+    {
+      stockCode: "035420",
+      stockName: "NAVER",
+      condition: "lte",
+      target: 210000,
+      currentPrice: 208000,
+      triggeredAt: "2025-12-16T09:03:00",
+    },
+    {
+      stockCode: "005380",
+      stockName: "현대차",
+      condition: "gte",
+      target: 200000,
+      currentPrice: 201500,
+      triggeredAt: "2025-12-16T09:04:00",
+    },
+    {
+      stockCode: "006400",
+      stockName: "삼성SDI",
+      condition: "lte",
+      target: 380000,
+      currentPrice: 379000,
+      triggeredAt: "2025-12-16T09:05:00",
+    },
+    {
+      stockCode: "068270",
+      stockName: "셀트리온",
+      condition: "gte",
+      target: 180000,
+      currentPrice: 181000,
+      triggeredAt: "2025-12-16T09:06:00",
+    },
+  ];
+
+  // store에 이벤트 적재 (토스트는 MainLayout에서 처리됨)
+  mockAlertEvents.forEach(ev => {
+    alertEventsStore.addEvent(ev);
+  });
+
 
   alert("로그인 성공!"); // ✅ 이거 다시 추가
   router.push("/app/dashboard");

@@ -49,7 +49,7 @@ const closeChat = () => {
   display: flex;
   flex-direction: column;
 
-  z-index: 45;
+  z-index: 80;
 }
 
 /* 헤더 */
@@ -82,4 +82,5 @@ const closeChat = () => {
   flex: 1;
   overflow: hidden;
 }
+
 </style>
