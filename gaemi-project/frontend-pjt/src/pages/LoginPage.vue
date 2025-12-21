@@ -64,7 +64,7 @@ import { useRouter } from "vue-router";
 import eyeOpen from "@/assets/icons/eye-open.png";
 import eyeClosed from "@/assets/icons/eye-closed.png";
 import { useAlertEventsStore } from "@/stores/alertEventsStore";
-import axios from "axios";
+import api from "@/api/axios";
 
 const alertEventsStore = useAlertEventsStore();
 
@@ -105,14 +105,16 @@ watch(
 
 const onSubmit = async () => {
   try {
-    const res = await axios.post("/api/v1/users/login/", {
+    const res = await api.post("/users/login/", {
       username: form.value.username,
       password: form.value.password,
     });
 
     // 🔑 access token 저장
     const accessToken = res.data.access;
+    const refreshToken = res.data.refresh;
     localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
 
     // (선택) 로그인 상태 표시용 최소 정보
     localStorage.setItem(
