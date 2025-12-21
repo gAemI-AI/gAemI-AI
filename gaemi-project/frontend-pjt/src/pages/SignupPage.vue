@@ -88,7 +88,7 @@
           </div>
 
           <!-- 전화번호 -->
-          <div class="field">
+          <!-- <div class="field">
             <label>전화번호</label>
             <input
               v-model="form.phone"
@@ -97,7 +97,7 @@
               @input="handlePhoneInput"
             />
             <p v-if="phoneStatus === 'invalid'" class="error-msg">❌ 전화번호는 숫자만 입력할 수 있습니다.</p>
-          </div>
+          </div> -->
 
         </div> <!-- info-grid -->
       </section>
@@ -178,7 +178,7 @@ const form = ref({
   password: "",
   passwordConfirm: "",
   email: "",
-  phone: "",
+  // phone: "",
   favorites: []
 });
 
@@ -257,12 +257,12 @@ const validateEmail = () => {
 };
 
 /* 전화번호 */
-const phoneStatus = ref(null);
-const handlePhoneInput = (e) => {
-  const onlyNumbers = e.target.value.replace(/[^0-9]/g, "");
-  phoneStatus.value = onlyNumbers !== e.target.value ? "invalid" : null;
-  form.value.phone = onlyNumbers;
-};
+// const phoneStatus = ref(null);
+// const handlePhoneInput = (e) => {
+//   const onlyNumbers = e.target.value.replace(/[^0-9]/g, "");
+//   phoneStatus.value = onlyNumbers !== e.target.value ? "invalid" : null;
+//   form.value.phone = onlyNumbers;
+// };
 
 /* 관심 종목 */
 const searchQuery = ref("");
@@ -299,8 +299,8 @@ const onSubmit = () => {
   if (emailStatus.value !== "valid")
     return alert("올바른 이메일을 입력해주세요.");
 
-  if (!form.value.phone || phoneStatus.value === "invalid")
-    return alert("전화번호는 숫자만 입력할 수 있습니다.");
+  // if (!form.value.phone || phoneStatus.value === "invalid")
+  //   return alert("전화번호는 숫자만 입력할 수 있습니다.");
 
   localStorage.setItem("user", JSON.stringify(form.value));
   alert("회원가입 완료!");
@@ -512,4 +512,11 @@ input {
   margin: 0 auto 12px;
   display: block;
 }
+/* 🔧 input 깨짐 방지 핵심 패치 */
+.input-row input,
+.input {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 </style>

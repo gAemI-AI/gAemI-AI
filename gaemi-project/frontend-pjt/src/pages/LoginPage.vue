@@ -1,9 +1,14 @@
 <template>
   <div class="auth-page">
     <div class="auth-card small">
+      <!-- 로고 -->
       <img src="@/assets/logo/gaemi.png" class="auth-logo" />
-      <h1 class="title">로그인</h1>
-      <p class="subtitle">시간 없는 개미를 위한 AI 투자 파트너</p>
+
+      <!-- 타이틀 -->
+      <div class="header">
+        <h1 class="title">로그인</h1>
+        <p class="subtitle">시간 없는 개미를 위한 AI 투자 파트너</p>
+      </div>
 
       <form class="form" @submit.prevent="onSubmit">
         <!-- 아이디 -->
@@ -18,25 +23,27 @@
         </div>
 
         <!-- 비밀번호 -->
-        <div class="input-row">
-          <input
-            :type="showPw ? 'text' : 'password'"
-            v-model="form.password"
-            placeholder="비밀번호"
-            required
-          />
-          <button
-            type="button"
-            class="icon-btn"
-            @click="showPw = !showPw"
-          >
-            <img
-              :src="showPw ? eyeClosed : eyeOpen"
-              class="eye-icon"
+        <div class="field">
+          <label>비밀번호</label>
+          <div class="input-wrapper">
+            <input
+              :type="showPw ? 'text' : 'password'"
+              v-model="form.password"
+              placeholder="비밀번호"
+              required
             />
-          </button>
+            <button
+              type="button"
+              class="icon-btn"
+              @click="showPw = !showPw"
+            >
+              <img
+                :src="showPw ? eyeClosed : eyeOpen"
+                class="eye-icon"
+              />
+            </button>
+          </div>
         </div>
-
 
         <button class="primary-btn">로그인</button>
       </form>
@@ -51,30 +58,14 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import eyeOpen from "@/assets/icons/eye-open.png";
 import eyeClosed from "@/assets/icons/eye-closed.png";
+import { useAlertEventsStore } from "@/stores/alertEventsStore";
 
-import { watch } from "vue";
-
-/* 한글 → 영문 매핑 */
-const hangulToEngMap = {
-  'ㅂ':'q','ㅈ':'w','ㄷ':'e','ㄱ':'r','ㅅ':'t',
-  'ㅛ':'y','ㅕ':'u','ㅑ':'i','ㅐ':'o','ㅔ':'p',
-  'ㅁ':'a','ㄴ':'s','ㅇ':'d','ㄹ':'f','ㅎ':'g',
-  'ㅗ':'h','ㅓ':'j','ㅏ':'k','ㅣ':'l',
-  'ㅋ':'z','ㅌ':'x','ㅊ':'c','ㅍ':'v','ㅠ':'b',
-  'ㅜ':'n','ㅡ':'m'
-};
-
-function convertHangulToEng(input) {
-  return input
-    .split("")
-    .map(ch => hangulToEngMap[ch] || ch)
-    .join("");
-}
+const alertEventsStore = useAlertEventsStore();
 
 
 const router = useRouter();
@@ -85,25 +76,35 @@ const form = ref({
   password: "",
 });
 
+/* 한글 → 영문 자동 변환 */
+const hangulToEngMap = {
+  'ㅂ':'q','ㅈ':'w','ㄷ':'e','ㄱ':'r','ㅅ':'t',
+  'ㅛ':'y','ㅕ':'u','ㅑ':'i','ㅐ':'o','ㅔ':'p',
+  'ㅁ':'a','ㄴ':'s','ㅇ':'d','ㄹ':'f','ㅎ':'g',
+  'ㅗ':'h','ㅓ':'j','ㅏ':'k','ㅣ':'l',
+  'ㅋ':'z','ㅌ':'x','ㅊ':'c','ㅍ':'v','ㅠ':'b',
+  'ㅜ':'n','ㅡ':'m'
+};
+
 watch(
   () => form.value.password,
   (val) => {
-    const converted = convertHangulToEng(val || "");
-    if (converted !== val) {
-      form.value.password = converted;
-    }
+    const converted = val
+      .split("")
+      .map(ch => hangulToEngMap[ch] || ch)
+      .join("");
+    if (converted !== val) form.value.password = converted;
   }
 );
-/* 임시 유저 데이터 - 회원가입 기능 연결 전까지 사용 */
+
 const mockUsers = [
   { username: "gaemi", nickname: "개미봇", password: "1234" },
-  { username: "test", nickname: "주연", password: "1234" },
+  { username: "test", nickname: "관리자", password: "1234" },
 ];
 
-/* 로그인 */
 const onSubmit = () => {
   const user = mockUsers.find(
-    (u) =>
+    u =>
       u.username === form.value.username &&
       u.password === form.value.password
   );
@@ -113,10 +114,6 @@ const onSubmit = () => {
     return;
   }
 
-  /* --------------------------
-      로그인 상태 저장 (중요)
-      MainLayout에서 읽기 위한 구조
-  ---------------------------*/
   localStorage.setItem(
     "user",
     JSON.stringify({
@@ -126,68 +123,159 @@ const onSubmit = () => {
     })
   );
 
-  alert("로그인 성공!");
+  // ===============================
+  // 🔔 [임시] 로그인 시 서버에서 내려온 알림 이벤트 mock
+  // - 나중에 WebSocket / API로 대체될 부분
+  // ===============================
+  const mockAlertEvents = [
+    {
+      stockCode: "005930",
+      stockName: "삼성전자",
+      condition: "gte",
+      target: 80000,
+      currentPrice: 80100,
+      triggeredAt: "2025-12-16T09:01:00",
+    },
+    {
+      stockCode: "000660",
+      stockName: "SK하이닉스",
+      condition: "gte",
+      target: 150000,
+      currentPrice: 151200,
+      triggeredAt: "2025-12-16T09:02:00",
+    },
+    {
+      stockCode: "035420",
+      stockName: "NAVER",
+      condition: "lte",
+      target: 210000,
+      currentPrice: 208000,
+      triggeredAt: "2025-12-16T09:03:00",
+    },
+    {
+      stockCode: "005380",
+      stockName: "현대차",
+      condition: "gte",
+      target: 200000,
+      currentPrice: 201500,
+      triggeredAt: "2025-12-16T09:04:00",
+    },
+    {
+      stockCode: "006400",
+      stockName: "삼성SDI",
+      condition: "lte",
+      target: 380000,
+      currentPrice: 379000,
+      triggeredAt: "2025-12-16T09:05:00",
+    },
+    {
+      stockCode: "068270",
+      stockName: "셀트리온",
+      condition: "gte",
+      target: 180000,
+      currentPrice: 181000,
+      triggeredAt: "2025-12-16T09:06:00",
+    },
+  ];
+
+  // store에 이벤트 적재 (토스트는 MainLayout에서 처리됨)
+  mockAlertEvents.forEach(ev => {
+    alertEventsStore.addEvent(ev);
+  });
+
+
+  alert("로그인 성공!"); // ✅ 이거 다시 추가
   router.push("/app/dashboard");
 };
 
-/* 이동 함수 */
 const goSignup = () => router.push("/signup");
 const goWelcome = () => router.push("/welcome");
 </script>
 
 <style scoped>
-/* 기존 디자인 그대로 */
 .auth-page {
-  width: 100%;
   min-height: 100vh;
   background: #f7f8fa;
   display: flex;
   justify-content: center;
   align-items: center;
 }
+
 .auth-card {
-  width: 420px;
+  width: 380px;
   background: white;
   padding: 36px 40px;
   border-radius: 16px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
 }
-.auth-card.small {
-  width: 380px;
+
+.auth-logo {
+  width: 56px;
+  margin: 0 auto 12px;
+  display: block;
 }
+
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
 .title {
   font-size: 26px;
   font-weight: 700;
-  margin-bottom: 4px;
 }
+
 .subtitle {
   font-size: 14px;
   color: #6b7280;
-  margin-bottom: 24px;
+  margin-top: 4px;
 }
+
 .form {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
+
 .field label {
   display: block;
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 6px;
 }
+
 input {
   width: 100%;
   padding: 10px 14px;
   border-radius: 8px;
   border: 1px solid #d1d5db;
+  box-sizing: border-box;
 }
-.input-row {
+
+.input-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
 }
+
+.input-wrapper input {
+  padding-right: 44px;
+}
+
+.icon-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.eye-icon {
+  width: 20px;
+}
+
 .primary-btn {
+  margin-top: 8px;
   width: 100%;
   background: #2563eb;
   color: white;
@@ -196,33 +284,15 @@ input {
   border: none;
   font-weight: 600;
 }
+
 .footer-text {
   margin-top: 20px;
   text-align: center;
 }
+
 .link {
   color: #2563eb;
-  cursor: pointer;
   font-weight: 600;
-}
-.icon-btn {
-  position: absolute;
-  right: 10px;
-  border: none;
-  background: none;
   cursor: pointer;
-  padding: 0;
 }
-
-.eye-icon {
-  width: 20px;
-  height: 20px;
-}
-.auth-logo {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 12px;
-  display: block;
-}
-
 </style>
