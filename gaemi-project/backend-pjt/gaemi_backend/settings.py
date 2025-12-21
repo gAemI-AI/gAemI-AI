@@ -37,6 +37,7 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',  # django.contrib.staticfiles보다 위에 있어야 함!
     'rest_framework', # Django REST framework
     'corsheaders',  # CORS headers (프론트와 통합을 고려할 때 추가)
     'rest_framework.authtoken',
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'channels',  # Django Channels
     # 'django_elasticsearch_dsl', # ORM과 연동할 때 필요
 
     # My apps
@@ -88,6 +90,18 @@ TEMPLATES = [
         },
     },
 ]
+
+ASGI_APPLICATION = 'gaemi_backend.asgi.application'
+
+# Channel Layer 설정 (Redis 사용)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("redis", 6379)],  # docker-compose 서비스명 'redis' 사용
+        },
+    },
+}
 
 WSGI_APPLICATION = 'gaemi_backend.wsgi.application'
 

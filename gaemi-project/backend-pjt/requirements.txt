@@ -14,3 +14,9 @@ openai               # GPT 호출용
 elasticsearch
 
 drf-yasg
+
+# WebSocket & Redis 관련
+daphne>=4.0.0          # ASGI 서버
+channels>=4.0.0        # Django Channels
+channels-redis>=4.0.0  # Redis Channel Layer
+kafka-python>=2.0.2    # Kafka 연동
