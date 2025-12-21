@@ -117,6 +117,7 @@
 </template>
 
 <script setup>
+import axios from "axios";
 import { RouterView, RouterLink, useRouter, useRoute } from "vue-router";
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 
@@ -220,15 +221,35 @@ function flushUnshownEvents() {
     localStorage.setItem(lastToastKey.value, newest.triggeredAt);
   }
 }
+const fetchMe = async () => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) return;
+
+  try {
+    const res = await axios.get("/api/v1/users/me/", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    user.value = {
+      ...res.data,
+      isLogin: true,
+    };
+
+  } catch (err) {
+    console.error("users/me 실패", err);
+    localStorage.removeItem("accessToken");
+    user.value = null;
+    router.push("/login");
+  }
+};
 
 onMounted(() => {
   favoritesStore.loadFromLocal();
-
-  const saved = localStorage.getItem("user");
-  if (saved) user.value = JSON.parse(saved);
-
   chatbotStore.loadFromLocal();
-
+  fetchMe();
+  
   if (
     chatbotStore.messages.length > 0 &&
     route.path.startsWith("/app/chatbot")

@@ -64,6 +64,7 @@ import { useRouter } from "vue-router";
 import eyeOpen from "@/assets/icons/eye-open.png";
 import eyeClosed from "@/assets/icons/eye-closed.png";
 import { useAlertEventsStore } from "@/stores/alertEventsStore";
+import axios from "axios";
 
 const alertEventsStore = useAlertEventsStore();
 
@@ -97,95 +98,63 @@ watch(
   }
 );
 
-const mockUsers = [
-  { username: "gaemi", nickname: "개미봇", password: "1234" },
-  { username: "test", nickname: "관리자", password: "1234" },
-];
+// const mockUsers = [
+//   { username: "gaemi", nickname: "개미봇", password: "1234" },
+//   { username: "test", nickname: "관리자", password: "1234" },
+// ];
 
-const onSubmit = () => {
-  const user = mockUsers.find(
-    u =>
-      u.username === form.value.username &&
-      u.password === form.value.password
-  );
+const onSubmit = async () => {
+  try {
+    const res = await axios.post("/api/v1/users/login/", {
+      username: form.value.username,
+      password: form.value.password,
+    });
 
-  if (!user) {
+    // 🔑 access token 저장
+    const accessToken = res.data.access;
+    localStorage.setItem("accessToken", accessToken);
+
+    // (선택) 로그인 상태 표시용 최소 정보
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        username: form.value.username,
+        isLogin: true,
+      })
+    );
+
+    // ===============================
+    // 🔔 [임시] 로그인 시 서버에서 내려온 알림 이벤트 mock
+    // ===============================
+    const mockAlertEvents = [
+      {
+        stockCode: "005930",
+        stockName: "삼성전자",
+        condition: "gte",
+        target: 80000,
+        currentPrice: 80100,
+        triggeredAt: "2025-12-16T09:01:00",
+      },
+      {
+        stockCode: "000660",
+        stockName: "SK하이닉스",
+        condition: "gte",
+        target: 150000,
+        currentPrice: 151200,
+        triggeredAt: "2025-12-16T09:02:00",
+      },
+    ];
+
+    mockAlertEvents.forEach(ev => {
+      alertEventsStore.addEvent(ev);
+    });
+
+    alert("로그인 성공!");
+    router.push("/app/dashboard");
+  } catch (err) {
+    console.error(err);
     alert("아이디 또는 비밀번호가 올바르지 않습니다.");
-    return;
   }
-
-  localStorage.setItem(
-    "user",
-    JSON.stringify({
-      username: user.username,
-      nickname: user.nickname,
-      isLogin: true,
-    })
-  );
-
-  // ===============================
-  // 🔔 [임시] 로그인 시 서버에서 내려온 알림 이벤트 mock
-  // - 나중에 WebSocket / API로 대체될 부분
-  // ===============================
-  const mockAlertEvents = [
-    {
-      stockCode: "005930",
-      stockName: "삼성전자",
-      condition: "gte",
-      target: 80000,
-      currentPrice: 80100,
-      triggeredAt: "2025-12-16T09:01:00",
-    },
-    {
-      stockCode: "000660",
-      stockName: "SK하이닉스",
-      condition: "gte",
-      target: 150000,
-      currentPrice: 151200,
-      triggeredAt: "2025-12-16T09:02:00",
-    },
-    {
-      stockCode: "035420",
-      stockName: "NAVER",
-      condition: "lte",
-      target: 210000,
-      currentPrice: 208000,
-      triggeredAt: "2025-12-16T09:03:00",
-    },
-    {
-      stockCode: "005380",
-      stockName: "현대차",
-      condition: "gte",
-      target: 200000,
-      currentPrice: 201500,
-      triggeredAt: "2025-12-16T09:04:00",
-    },
-    {
-      stockCode: "006400",
-      stockName: "삼성SDI",
-      condition: "lte",
-      target: 380000,
-      currentPrice: 379000,
-      triggeredAt: "2025-12-16T09:05:00",
-    },
-    {
-      stockCode: "068270",
-      stockName: "셀트리온",
-      condition: "gte",
-      target: 180000,
-      currentPrice: 181000,
-      triggeredAt: "2025-12-16T09:06:00",
-    },
-  ];
-
-  // store에 이벤트 적재 (토스트는 MainLayout에서 처리됨)
-  mockAlertEvents.forEach(ev => {
-    alertEventsStore.addEvent(ev);
-  });
-
-
-  alert("로그인 성공!"); // ✅ 이거 다시 추가
-  router.push("/app/dashboard");
 };
 
 const goSignup = () => router.push("/signup");
