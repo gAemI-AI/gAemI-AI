@@ -95,7 +95,7 @@ const fetchChartData = async () => {
 
   try {
     const res = await api.get(
-      `/stocks/${props.stock.code}/chart/`,
+      `stocks/${props.stock.code}/chart/`,
       {
         params: {
           range: selectedRange.value.toLowerCase(), // 1d, 1w, 1m
@@ -116,6 +116,13 @@ const fetchChartData = async () => {
   } catch (e) {
     console.error('📉 chart fetch error', e);
   }
+
+  console.log({
+    prices: prices.value,
+    volumes: volumes.value,
+    xLabels: xLabels.value,
+  });
+
 };
 onMounted(fetchChartData);
 
