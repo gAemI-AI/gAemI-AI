@@ -1,4 +1,5 @@
 // src/stores/favoritesStore.js
+import { getWatchlist, addWatchlist, removeWatchlist } from "@/api/watchlist";
 import { defineStore } from "pinia";
 
 export const useFavoritesStore = defineStore("favorites", {
@@ -15,8 +16,20 @@ export const useFavoritesStore = defineStore("favorites", {
       }
     },
 
+    // 서버에서 관심종목 로드
+    async fetchWatchlist() {
+      try {
+        const data = await getWatchlist();
+        // ⚠️ 백엔드 응답 구조에 맞게 조정 필요
+        // 예: [{ stock_id, stock_code }, ...]
+        this.favorites = data.map(item => item.stock_code);
+      } catch (e) {
+        console.error("watchlist fetch error", e);
+      }
+    },
+
     // ⭐ 관심종목 토글 (코드 기반)
-    toggleFavorite(code) {
+    async toggleFavorite(stock) {
       if (this.favorites.includes(code)) {
         this.favorites = this.favorites.filter((c) => c !== code);
       } else {
