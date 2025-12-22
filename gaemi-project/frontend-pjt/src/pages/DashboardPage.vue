@@ -63,7 +63,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useFavoritesStore } from "@/stores/favoritesStore.js";
 import { useAlertsStore } from "@/stores/alertsStore";
 import api from "@/api/axios";
@@ -76,51 +76,7 @@ import MarketSummaryPanel from "@/components/dashboard/MarketSummaryPanel.vue";
 
 /* Pinia Store */
 const store = useFavoritesStore();
-
-// // 🔔 더미 알림 데이터 추가
-// const alerts = ref([
-//   {
-//     id: 1,
-//     statusClass: "working",
-//     stockName: "삼성전자",
-//     title: "목표가 도달했습니다.",
-//     time: "10:32",
-//   },
-//   {
-//     id: 2,
-//     statusClass: "done",
-//     stockName: "NAVER",
-//     title: "지정가 이하로 하락했습니다.",
-//     time: "09:15",
-//   },
-// ]);
 const alertsStore = useAlertsStore();
-
-/* ------------------------------- */
-/* 로그인 유저 관심종목 불러오기   */
-/* ------------------------------- */
-onMounted(async () => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (user?.favorites) {
-    store.loadFavorites(user.favorites); // ⭐ Pinia에 로드
-  }
-
-  try {
-    const res = await api.get("/stocks/");
-    stocks.value = res.data.map((s) => ({
-      code: s.stock_id,
-      name: s.stock_name,
-      marketType: s.market_type,
-
-      price: 0,
-      change: 0,
-      changeRate: 0,
-    }));
-    console.log("[stocks]", res.data);
-  } catch (err) {
-    console.error('stocks 조회 실패', err);
-  }
-});
 
 /* -------------------------------------- */
 /* 검색 관련 상태 */
@@ -135,27 +91,70 @@ const searchChartOpen = ref(false);
 const favoriteSelectedStock = ref(null);
 const favoriteChartOpen = ref(false);
 const stocks = ref([]);
+
+watch(
+  () => store.favorites,
+  (newFavorites) => {
+    if (
+      favoriteSelectedStock.value &&
+      !newFavorites.includes(favoriteSelectedStock.value.code)
+    ) {
+      favoriteSelectedStock.value = null;
+      favoriteChartOpen.value = false;
+    }
+  }
+);
+
+/* ------------------------------- */
+/* 로그인 유저 관심종목 불러오기   */
+/* ------------------------------- */
+onMounted(async () => {
+  const hasToken = !!localStorage.getItem("accessToken");
+
+  if (hasToken) {
+    await store.fetchWatchlist();
+  } else {
+    store.loadFromLocal();
+  }
+
+  try {
+    const res = await api.get("/stocks/");
+    stocks.value = res.data.map((s) => ({
+      code: s.stock_id,
+      stockId: s.stock_id,
+      name: s.stock_name,
+      marketType: s.market_type,
+
+      price: 0,
+      change: 0,
+      changeRate: 0,
+    }));
+
+  } catch (err) {
+    console.error('stocks 조회 실패', err);
+  }
+});
 /* -------------------------------------- */
 /* 검색 결과 필터링 */
 /* -------------------------------------- */
 const filteredStocks = computed(() => {
   if (!searchKeyword.value) return stocks.value;
-  return stocks.value.filter(
-    (s) =>
-      s.name.includes(searchKeyword.value) ||
-      s.code.includes(searchKeyword.value)
-  );
+  const kw = searchKeyword.value;
+
+  return stocks.value.filter((s) => {
+    const name = s.name ?? "";
+    const code = s.code ?? "";
+    return name.includes(kw) || code.includes(kw);
+  });
 });
 
 /* 관심종목 리스트 */
-// const favoriteStocks = computed(() => store.favorites);
-const favoriteStocks = computed(() =>
-  store.favorites
-    .map(code => stocks.value.find(s => s.code === code))
+const favoriteStocks = computed(() => {
+  if (!Array.isArray(store.favorites)) return [];
+  return store.favorites
+    .map((code) => stocks.value.find((s) => s.code === code))
     .filter(Boolean)
-);
-
-
+});
 
 /* 이벤트 */
 function onSearch(keyword) {
@@ -189,6 +188,7 @@ function onSelectFromFavorite(stock) {
   /* 🔧 핵심: grid overflow 방지 */
   grid-template-columns: minmax(0, 3fr) minmax(0, 1.2fr);
   gap: 20px;
+  align-items: start;
 }
 
 .left-column {
@@ -205,8 +205,6 @@ function onSelectFromFavorite(stock) {
   flex-direction: column;
   gap: 16px;
 
-  /* 오른쪽 컬럼 자체는 스크롤 ❌ */
-  height: calc(100vh - 64px - 40px); 
 }
 
 

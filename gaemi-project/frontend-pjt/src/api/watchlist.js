@@ -13,11 +13,11 @@ export const getWatchlist = async () => {
 /**
  * 관심종목 추가
  * POST /watchlist/
- * @param {string|number} stockId - 종목 ID
+ * @param {string} stockCode - 종목 ID
  */
-export const addWatchlist = async (stockId) => {
+export const addWatchlist = async (stockCode) => {
   const res = await api.post("/watchlist/", {
-    stock_id: stockId,
+    stock: stockCode,
   });
   return res.data;
 };
@@ -25,9 +25,9 @@ export const addWatchlist = async (stockId) => {
 /**
  * 관심종목 삭제
  * DELETE /watchlist/{stock_id}/
- * @param {string|number} stockId - 종목 ID
+ * @param {string} stockCode - 종목 ID
  */
-export const removeWatchlist = async (stockId) => {
-  const res = await api.delete(`/watchlist/${stockId}/`);
+export const removeWatchlist = async (stockCode) => {
+  const res = await api.delete(`/watchlist/${stockCode}/`);
   return res.data;
 };
