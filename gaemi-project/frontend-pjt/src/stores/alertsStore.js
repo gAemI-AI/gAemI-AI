@@ -1,6 +1,7 @@
 // src/stores/alertsStore.js
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import { fetchNotificationRules, createNotificationRule, deleteNotificationRule } from "@/api/notifications";
 
 const CONDITION_META = {
   gte: { label: "가격 이상", unit: "원" },
@@ -18,28 +19,6 @@ function makeDescription(condition, target) {
 export const useAlertsStore = defineStore("alerts", () => {
   // ✅ 알림 "조건" 원본
   const alerts = ref([]);
-
-  /* ------------------------
-     LocalStorage
-  ------------------------ */
-  function saveToLocal() {
-    localStorage.setItem("alerts", JSON.stringify(alerts.value));
-  }
-
-  function loadFromLocal() {
-    const saved = localStorage.getItem("alerts");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) alerts.value = parsed;
-      } catch (e) {
-        // 파싱 실패 시 무시
-      }
-    }
-  }
-
-  // ✅ 초기 로드 시 LocalStorage에서 데이터 불러오기
-  loadFromLocal();
 
   /* ------------------------
      대시보드용 "알림 내역" 형태로 변환
@@ -74,19 +53,16 @@ export const useAlertsStore = defineStore("alerts", () => {
       description: makeDescription(condition, target),
       enabled: true,
     });
-    saveToLocal(); // 새로 추가된 알림은 로컬스토리지에 즉시 저장
   }
 
   function removeAlert(id) {
     alerts.value = alerts.value.filter((a) => a.id !== id);
-    saveToLocal(); // 알림 삭제 후 로컬스토리지 업데이트
   }
 
   function toggleAlert(id) {
     const alert = alerts.value.find((a) => a.id === id);
     if (!alert) return;
     alert.enabled = !alert.enabled;
-    saveToLocal(); // 알림 상태 변경 후 로컬스토리지 업데이트
   }
 
   /* ------------------------
@@ -98,7 +74,6 @@ export const useAlertsStore = defineStore("alerts", () => {
 
   function removeByStockCode(stockCode) {
     alerts.value = alerts.value.filter((a) => a.stockCode !== stockCode);
-    saveToLocal(); // 관심 종목 삭제 후 로컬스토리지 업데이트
   }
 
   return {
@@ -110,8 +85,5 @@ export const useAlertsStore = defineStore("alerts", () => {
     toggleAlert,
     hasAlertsForStock,
     removeByStockCode,
-
-    loadFromLocal,
-    saveToLocal,
   };
 });
