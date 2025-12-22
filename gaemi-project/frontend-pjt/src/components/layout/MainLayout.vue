@@ -117,7 +117,7 @@
 </template>
 
 <script setup>
-import axios from "axios";
+import api from "@/api/axios";
 import { RouterView, RouterLink, useRouter, useRoute } from "vue-router";
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 
@@ -131,6 +131,7 @@ import ChatbotFab from "@/components/chat/ChatbotFab.vue";
 import ChatbotPanel from "@/components/chat/ChatbotPanel.vue";
 import ToastStack from "@/components/toast/ToastStack.vue";
 
+import { logout as logoutApi } from "@/api/auth";
 const favoritesStore = useFavoritesStore();
 const chatbotStore = useChatbotStore();
 const toastStore = useToastStore();
@@ -222,15 +223,8 @@ function flushUnshownEvents() {
   }
 }
 const fetchMe = async () => {
-  const token = localStorage.getItem("accessToken");
-  if (!token) return;
-
   try {
-    const res = await axios.get("/api/v1/users/me/", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const res = await api.get("/users/me/");
 
     user.value = {
       ...res.data,
@@ -239,9 +233,7 @@ const fetchMe = async () => {
 
   } catch (err) {
     console.error("users/me 실패", err);
-    localStorage.removeItem("accessToken");
     user.value = null;
-    router.push("/login");
   }
 };
 
@@ -272,8 +264,8 @@ const toggleDropdown = () => {
   dropdownOpen.value = !dropdownOpen.value;
 };
 
-const logout = () => {
-  localStorage.removeItem("user");
+const logout = async () => {
+  await logoutApi();
   dropdownOpen.value = false;
   alert("로그아웃 되었습니다.");
   router.push("/login");
