@@ -12,12 +12,12 @@ djangorestframework
 elasticsearch-dsl    # ES 통신용 (공식 라이브러리)
 openai               # GPT 호출용
 elasticsearch
-# elasticsearch>=8.0.0
 
 drf-yasg
+jamo==0.4.1
 
 # WebSocket & Redis 관련
 daphne>=4.0.0          # ASGI 서버
 channels>=4.0.0        # Django Channels
 channels-redis>=4.0.0  # Redis Channel Layer
-kafka-python>=2.0.2    # Kafka 연동
+kafka-python>=2.0.2    # Kafka 연동, 

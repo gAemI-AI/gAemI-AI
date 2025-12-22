@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from elasticsearch import Elasticsearch
+from .services import StockSearchService  
 
 # 주식 목록 조회 전용 뷰 (GET)
 class StockListView(generics.ListAPIView):
@@ -25,10 +26,22 @@ class StockListView(generics.ListAPIView):
     # 3. 누구에게 보여줄건지 -> 로그인한 사람에게만
     permission_classes = [AllowAny] # 모두에게 보여주려면 AllowAny으로 바꾸면 됨!
 
-    # 4. 검색 기능 활성화
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['stock_name', 'stock_id', 'market_type']
+    def list(self, request, *args, **kwargs):
+        # 검색어 파라미터 가져오기 (?search=삼성)
+        keyword = request.query_params.get('search', '').strip()
 
+        # A. 검색어가 있다면 -> Elasticsearch 사용
+        if keyword:
+            service = StockSearchService()
+            es_results = service.search(keyword)
+            
+            # ES 결과를 그대로 반환 (Serializer를 거치지 않고 직접 리스트 반환)
+            # RDB 조회 비용 절약 + ES의 빠른 속도 활용
+            return Response(es_results, status=status.HTTP_200_OK)
+
+        # B. 검색어가 없다면 -> 기존 RDB Pagination 로직 사용
+        return super().list(request, *args, **kwargs)
+    
 # 주식 차트 데이터 조회 API (OHLC Aggregation)
 #   - ES의 주식 틱 데이터를 조회하여 지정된 시간 간격으로 집계한 캔들 데이터를 반환
 #   - URL: GET /api/v1/stocks/{stock_code}/chart/?range=1d&interval=1m
