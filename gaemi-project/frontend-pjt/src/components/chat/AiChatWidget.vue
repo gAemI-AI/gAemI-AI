@@ -8,7 +8,11 @@
         class="bubble"
         :class="bubbleClass(m.role)"
       >
-        {{ m.content }}
+        <!--assistant만 markdown 렌더링-->
+        <div v-if="m.role === 'assistant'" v-html="renderContent(m)" />
+        <div v-else>
+          {{ m.content }}
+        </div>
       </div>
     </div>
 
@@ -28,10 +32,18 @@
 <script setup>
 import { ref, nextTick } from "vue";
 import { useChatbotStore } from "@/stores/chatbotStore";
+import { marked } from "marked";
 
 const chatbotStore = useChatbotStore();
 const input = ref("");
 const bodyRef = ref(null);
+
+function renderContent(message) {
+  if (message.role === 'assistant') {
+    return marked.parse(message.content);
+  }
+  return message.content;
+}
 
 function bubbleClass(role) {
   // store role: "user" | "assistant" | "system"
