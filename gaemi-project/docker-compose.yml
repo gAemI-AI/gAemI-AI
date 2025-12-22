@@ -331,6 +331,44 @@ services:
       - redis
     restart: on-failure
 
+  # 17. Spark Master (Cluster Manager)
+  spark-master:
+    build: 
+      context: ./data-pjt/spark
+    container_name: gaemi_spark_master
+    environment:
+      - SPARK_NO_DAEMONIZE=true # 컨테이너가 백그라운드에서 죽지 않게 설정
+    ports:
+      - "9090:8080" # 내부(8080) -> 외부(9090) 매핑
+      - "7077:7077" # Spark Master URL
+    volumes:
+      - ./data-pjt/spark/jobs:/opt/spark/jobs
+    # 마스터 실행 명령어를 직접 지정
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    depends_on:
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+
+  # 18. Spark Worker (Actual Computer)
+  spark-worker:
+    build: 
+      context: ./data-pjt/spark
+    container_name: gaemi_spark_worker
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1G
+    ports:
+      - "9091:8081" # 내부(8081) -> 외부(9091) 매핑
+    volumes:
+      - ./data-pjt/spark/jobs:/opt/spark/jobs
+    depends_on:
+      - spark-master
+    # 워커 실행 명령어 (마스터 주소 명시)
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+
   # [Infra] 1. Hadoop Namenode (HDFS 메인)
   hdfs:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
@@ -406,6 +444,8 @@ services:
       - "8082:8080" # 8080 포트는 겹침 -> 8082로 변경
     # 시작 시 DB 마이그레이션 + 관리자 계정 생성 + 웹서버/스케줄러 실행
     command: bash -c "airflow db migrate && airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin || true && airflow webserver & airflow scheduler"
+
+
 # 볼륨 정의: 컨테이너가 꺼져도 사라지지 않는 외장하드
 volumes:
   postgres_data: # DB 데이터 저장
