@@ -67,7 +67,8 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
+import api from '@/api/axios';
 
 const props = defineProps({
   stock: { type: Object, required: true },
@@ -81,23 +82,56 @@ const ranges = [
 ];
 
 const selectedRange = ref('1W');
+const xLabels = ref([]);
+const prices = ref([]);
+const volumes = ref([]);
 
-// 더미 데이터 (나중에 API 응답으로 교체)
-const xLabels = ['11월 14일', '11월 15일', '11월 16일', '11월 17일', '11월 18일', '11월 19일'];
-const prices = [72000, 71500, 70500, 69800, 71000, 70680];
-const volumes = [900000, 1200000, 800000, 1000000, 1100000, 950000];
+const maxPrice = computed(() => Math.max(...prices.value));
+const minPrice = computed(() => Math.min(...prices.value));
+const maxVolume = computed(() => Math.max(...volumes.value));
 
-const maxPrice = Math.max(...prices);
-const minPrice = Math.min(...prices);
-const maxVolume = Math.max(...volumes);
+const fetchChartData = async () => {
+  if (!props.stock?.code) return;
+
+  try {
+    const res = await api.get(
+      `/stocks/${props.stock.code}/chart/`,
+      {
+        params: {
+          range: selectedRange.value.toLowerCase(), // 1d, 1w, 1m
+          interval: '1d', // 지금은 고정 (나중에 수정해도 됨)
+        },
+      }
+    );
+
+    const data = res.data;
+
+    prices.value = data.map(d => d.y[3]);
+    volumes.value = data.map(d => d.v);
+
+    xLabels.value = data.map(d => {
+      const date = new Date(d.x);
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    });
+  } catch (e) {
+    console.error('📉 chart fetch error', e);
+  }
+};
+onMounted(fetchChartData);
+
+watch(selectedRange, () => {
+  fetchChartData();
+});
 
 const linePoints = computed(() => {
+  if (!prices.value.length) return '';
+
   const width = 100;
   const height = 40;
   const stepX = width / (prices.length - 1);
   const range = maxPrice - minPrice || 1;
 
-  return prices
+  return prices.value
     .map((p, i) => {
       const x = i * stepX;
       const y = height - ((p - minPrice) / range) * (height - 4) - 2;
@@ -105,6 +139,8 @@ const linePoints = computed(() => {
     })
     .join(' ');
 });
+
+
 </script>
 
 <style scoped>

@@ -2,11 +2,23 @@
   <div class="market-panel">
     <h3 class="panel-title">시장 지수</h3>
 
-    <div class="market-cards">
+    <!-- 로딩 -->
+    <div v-if="market.isLoading" class="empty">
+      시장 지수 불러오는 중...
+    </div>
+
+    <!-- 데이터 없음 -->
+    <div v-else-if="!market.kospi && !market.kosdaq" class="empty">
+      시장 지수 데이터가 없습니다.
+    </div>
+
+    <div v-else class="market-cards">
       <!-- 코스피 -->
-      <div class="market-card">
+      <div class="market-card" v-if="market.kospi">
         <div class="label">코스피</div>
-        <div class="price">{{ market.kospi.price.toLocaleString() }}</div>
+        <div class="price">
+          {{ market.kospi?.price.toLocaleString() }}
+        </div>
         <div
           class="diff"
           :class="{ up: market.kospi.diff >= 0, down: market.kospi.diff < 0 }"
@@ -19,10 +31,13 @@
         </div>
       </div>
 
+
       <!-- 코스닥 -->
-      <div class="market-card">
+      <div class="market-card" v-if="market.kosdaq">
         <div class="label">코스닥</div>
-        <div class="price">{{ market.kosdaq.price.toLocaleString() }}</div>
+        <div class="price">
+          {{ market.kosdaq?.price.toLocaleString() }}
+        </div>
         <div
           class="diff"
           :class="{ up: market.kosdaq.diff >= 0, down: market.kosdaq.diff < 0 }"
@@ -42,10 +57,13 @@
 import { onMounted } from "vue";
 import { useMarketStore } from "@/stores/marketStore";
 
+console.log("🔥 MarketSummaryPanel script loaded");
+
 const market = useMarketStore();
 
 onMounted(() => {
-  market.loadMock(); // 🔹 지금은 더미
+  console.log("🔥 MarketSummaryPanel mounted");
+  market.fetchMarketIndex(); // 🔹 지금은 더미
 });
 </script>
 
