@@ -4,7 +4,7 @@ import api from "@/api/axios";
 
 export const useFavoritesStore = defineStore("favorites", {
   state: () => ({
-    favorites: [], // ["005930", "035420"]
+    favorites: [],
     isLoaded: false,
   }),
 
@@ -16,7 +16,7 @@ export const useFavoritesStore = defineStore("favorites", {
       try {
         const res = await api.get("/watchlist/");
         // 백엔드 응답: [{ stock_code: "005930", ... }]
-        this.favorites = res.data.map((item) => item.stock);
+        this.favorites = res.data;
         this.isLoaded = true;
       } catch (err) {
         console.error("watchlist fetch 실패", err);
@@ -41,34 +41,25 @@ export const useFavoritesStore = defineStore("favorites", {
       const hasToken = !!localStorage.getItem("accessToken");
 
       if (!hasToken) {
-        if (this.favorites.includes(stockCode)) {
-          this.favorites = this.favorites.filter(c => c !== stockCode);
-        } else {
-          this.favorites.push(stockCode);
-        }
-        this.saveToLocal();
+        console.warn("비로그인 관심종목은 현재 미지원");
         return;
       }
-      try {
-        if (this.favorites.includes(stockCode)) {
-          await this.removeFavorite(stockCode);
-        } else {
-          await this.addFavorite(stockCode);
-        }
-      } catch (e) {
-        console.error("toggle 실패", e);
+      if (this.favorites.some(f => f.stock === stockCode)) {
+        await this.removeFavorite(stockCode);
+      } else {
+        await this.addFavorite(stockCode);
       }
     },
 
     async addFavorite(stockCode) {
       try {
-        if (this.favorites.includes(stockCode)) return;
+        if (this.favorites.some(f => f.stock === stockCode)) return;
 
         await api.post("/watchlist/", {
           stock: stockCode, // ⭐ 핵심
         });
 
-        this.favorites.push(stockCode);
+        await this.fetchWatchlist();
       } catch (err) {
         console.error("관심종목 추가 실패", err);
       }

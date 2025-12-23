@@ -97,7 +97,7 @@ watch(
   (newFavorites) => {
     if (
       favoriteSelectedStock.value &&
-      !newFavorites.includes(favoriteSelectedStock.value.code)
+      !newFavorites.some(f => f.stock === favoriteSelectedStock.value.code)
     ) {
       favoriteSelectedStock.value = null;
       favoriteChartOpen.value = false;
@@ -112,7 +112,11 @@ onMounted(async () => {
   const hasToken = !!localStorage.getItem("accessToken");
 
   if (hasToken) {
-    await store.fetchWatchlist();
+    await Promise.all([
+      store.fetchWatchlist(),
+      alertsStore.fetchAlerts(),
+    ]);
+    
   } else {
     store.loadFromLocal();
   }
@@ -152,8 +156,10 @@ const filteredStocks = computed(() => {
 const favoriteStocks = computed(() => {
   if (!Array.isArray(store.favorites)) return [];
   return store.favorites
-    .map((code) => stocks.value.find((s) => s.code === code))
-    .filter(Boolean)
+  .map(f =>
+    stocks.value.find(s => s.code === f.stock)
+  )
+  .filter(Boolean);
 });
 
 /* 이벤트 */

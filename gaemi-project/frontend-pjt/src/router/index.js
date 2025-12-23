@@ -33,7 +33,7 @@ const routes = [
       { path: "dashboard", component: DashboardPage },
       { path: "ai-news", component: AiNewsPage },
       { path: "alerts", component: AlertSettingsPage },
-      { path: "/app/chatbot", component: ChatbotPage, },
+      { path: "chatbot", component: ChatbotPage, },
     ],
   },
 ];

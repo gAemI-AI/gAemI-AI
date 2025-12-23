@@ -3,7 +3,6 @@ import api from "./axios";
 
 /**
  * 알림 규칙 목록 조회
- * GET /notifications/rules/
  */
 export const fetchNotificationRules = async () => {
   const res = await api.get("/notifications/rules/");
@@ -12,7 +11,6 @@ export const fetchNotificationRules = async () => {
 
 /**
  * 알림 규칙 생성
- * POST /notifications/rules/
  */
 export const createNotificationRule = async (payload) => {
   const res = await api.post("/notifications/rules/", payload);
@@ -20,9 +18,9 @@ export const createNotificationRule = async (payload) => {
 };
 
 /**
- * 알림 규칙 삭제
- * DELETE /notifications/rules/{rule_id}/
+ * ✅ 알림 규칙 삭제 (중요)
  */
-export const deleteNotificationRule = async (ruleId) => {
-  await api.delete(`/notifications/rules/${ruleId}/`);
+export const deleteNotificationRule = async (id) => {
+  const res = await api.delete(`/notifications/rules/${id}/`);
+  return res.data;
 };

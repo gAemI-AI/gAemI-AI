@@ -36,6 +36,7 @@
       <div class="chart-title">가격 추이</div>
       <svg viewBox="0 0 100 40" class="line-chart">
         <polyline
+          v-if="linePoints"
           :points="linePoints"
           fill="none"
           stroke-width="2"
@@ -86,9 +87,16 @@ const xLabels = ref([]);
 const prices = ref([]);
 const volumes = ref([]);
 
-const maxPrice = computed(() => Math.max(...prices.value));
-const minPrice = computed(() => Math.min(...prices.value));
-const maxVolume = computed(() => Math.max(...volumes.value));
+const maxPrice = computed(() =>
+  prices.value.length ? Math.max(...prices.value) : 0
+);
+const minPrice = computed(() =>
+  prices.value.length ? Math.min(...prices.value) : 0
+);
+const maxVolume = computed(() =>
+  volumes.value.length ? Math.max(...volumes.value) : 1
+);
+
 
 const fetchChartData = async () => {
   if (!props.stock?.code) return;
@@ -106,11 +114,22 @@ const fetchChartData = async () => {
 
     const data = res.data;
 
-    prices.value = data.map(d => d.y[3]);
-    volumes.value = data.map(d => d.v);
+    const parsed = (Array.isArray(data) ? data : []).map(d => {
+      const price = Array.isArray(d.y) ? Number(d.y[3]) : Number(d.close ?? d.price);
+      const volume = Number(d.v);
 
-    xLabels.value = data.map(d => {
-      const date = new Date(d.x);
+      return {
+        price: Number.isFinite(price) ? price : null,
+        volume: Number.isFinite(volume) ? volume : null,
+        label: d.x,
+      };
+    }).filter(d => d.price !== null);
+
+    prices.value = parsed.map(d => d.price);
+    volumes.value = parsed.map(d => d.volume ?? 0);
+
+    xLabels.value = parsed.map(d => {
+      const date = new Date(d.label);
       return `${date.getMonth() + 1}/${date.getDate()}`;
     });
   } catch (e) {
@@ -131,19 +150,28 @@ watch(selectedRange, () => {
 });
 
 const linePoints = computed(() => {
-  if (!prices.value.length) return '';
+  if (prices.value.length < 2) return '';
 
   const width = 100;
   const height = 40;
-  const stepX = width / (prices.length - 1);
-  const range = maxPrice - minPrice || 1;
+
+  const max = maxPrice.value;
+  const min = minPrice.value;
+  const range = max - min;
+
+  if (!Number.isFinite(range) || range <= 0) return '';
+
+  const stepX = width / (prices.value.length - 1);
 
   return prices.value
     .map((p, i) => {
+      if (!Number.isFinite(p)) return null;
+
       const x = i * stepX;
-      const y = height - ((p - minPrice) / range) * (height - 4) - 2;
+      const y = height - ((p - min) / range) * (height - 4) - 2;
       return `${x},${y}`;
     })
+    .filter(Boolean)
     .join(' ');
 });
 
