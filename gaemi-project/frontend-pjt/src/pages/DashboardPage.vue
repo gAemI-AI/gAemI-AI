@@ -25,7 +25,10 @@
           <h3>{{ searchSelectedStock.name }} ({{ searchSelectedStock.code }})</h3>
           <FavoriteButton :stock="searchSelectedStock" />
         </div>
-        <StockDetailCard :stock="searchSelectedStock" />
+        <StockDetailCard
+          :stock="searchSelectedStock"
+          @updatePrice="updateSearchStockPrice"
+        />
       </div>
 
       <!-- --------------------------------------- -->
@@ -47,7 +50,10 @@
           <h3>{{ favoriteSelectedStock.name }} ({{ favoriteSelectedStock.code }})</h3>
           <FavoriteButton :stock="favoriteSelectedStock" />
         </div>
-        <StockDetailCard :stock="favoriteSelectedStock" />
+        <StockDetailCard
+          :stock="favoriteSelectedStock"
+          @updatePrice="updateFavoriteStockPrice"
+        />
       </div>
     </section>
 
@@ -64,9 +70,9 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { useFavoritesStore } from "@/stores/favoritesStore.js";
-import { useAlertsStore } from "@/stores/alertsStore";
 import api from "@/api/axios";
+
+/* components */
 import StockSearchBar from "@/components/dashboard/StockSearchBar.vue";
 import StockTickerRow from "@/components/dashboard/StockTickerRow.vue";
 import StockDetailCard from "@/components/dashboard/StockDetailCard.vue";
@@ -74,30 +80,58 @@ import AlertHistoryList from "@/components/dashboard/AlertHistoryList.vue";
 import FavoriteButton from "@/components/common/FavoriteButton.vue";
 import MarketSummaryPanel from "@/components/dashboard/MarketSummaryPanel.vue";
 
-/* Pinia Store */
+/* stores */
+import { useFavoritesStore } from "@/stores/favoritesStore";
+import { useAlertsStore } from "@/stores/alertsStore";
+import { useChartSocketStore } from "@/stores/chartSocketStore";
+
+/* ----------------------------- */
+/* Pinia Store (⚠️ 최상단) */
+/* ----------------------------- */
 const store = useFavoritesStore();
 const alertsStore = useAlertsStore();
+const chartSocketStore = useChartSocketStore();
 
-/* -------------------------------------- */
-/* 검색 관련 상태 */
-/* -------------------------------------- */
+/* ----------------------------- */
+/* 상태 정의 */
+/* ----------------------------- */
+const stocks = ref([]);
+
+/* 검색 */
 const searchKeyword = ref("");
 const searchSelectedStock = ref(null);
 const searchChartOpen = ref(false);
 
-/* -------------------------------------- */
-/* 관심종목 상태 */
-/* -------------------------------------- */
+/* 관심종목 */
 const favoriteSelectedStock = ref(null);
 const favoriteChartOpen = ref(false);
-const stocks = ref([]);
 
+/* ----------------------------- */
+/* 현재 활성화된 종목 코드 */
+/* ----------------------------- */
+const activeCode = computed(() => {
+  if (searchChartOpen.value && searchSelectedStock.value?.code) {
+    return searchSelectedStock.value.code;
+  }
+  if (favoriteChartOpen.value && favoriteSelectedStock.value?.code) {
+    return favoriteSelectedStock.value.code;
+  }
+  return null;
+});
+
+/* ----------------------------- */
+/* watch */
+/* ----------------------------- */
+
+/* 관심종목 삭제 시 차트 닫기 */
 watch(
   () => store.favorites,
   (newFavorites) => {
     if (
       favoriteSelectedStock.value &&
-      !newFavorites.some(f => f.stock === favoriteSelectedStock.value.code)
+      !newFavorites.some(
+        f => f.stock === favoriteSelectedStock.value.code
+      )
     ) {
       favoriteSelectedStock.value = null;
       favoriteChartOpen.value = false;
@@ -105,9 +139,18 @@ watch(
   }
 );
 
-/* ------------------------------- */
-/* 로그인 유저 관심종목 불러오기   */
-/* ------------------------------- */
+/* WebSocket 연결 제어 */
+watch(activeCode, (code) => {
+  if (code) {
+    chartSocketStore.connect(code);
+  } else {
+    chartSocketStore.disconnect();
+  }
+});
+
+/* ----------------------------- */
+/* mounted */
+/* ----------------------------- */
 onMounted(async () => {
   const hasToken = !!localStorage.getItem("accessToken");
 
@@ -116,7 +159,6 @@ onMounted(async () => {
       store.fetchWatchlist(),
       alertsStore.fetchAlerts(),
     ]);
-    
   } else {
     store.loadFromLocal();
   }
@@ -128,41 +170,35 @@ onMounted(async () => {
       stockId: s.stock_id,
       name: s.stock_name,
       marketType: s.market_type,
-
       price: 0,
       change: 0,
       changeRate: 0,
     }));
-
   } catch (err) {
-    console.error('stocks 조회 실패', err);
+    console.error("stocks 조회 실패", err);
   }
 });
-/* -------------------------------------- */
-/* 검색 결과 필터링 */
-/* -------------------------------------- */
+
+/* ----------------------------- */
+/* computed */
+/* ----------------------------- */
 const filteredStocks = computed(() => {
   if (!searchKeyword.value) return stocks.value;
-  const kw = searchKeyword.value;
-
-  return stocks.value.filter((s) => {
-    const name = s.name ?? "";
-    const code = s.code ?? "";
-    return name.includes(kw) || code.includes(kw);
-  });
+  return stocks.value.filter(
+    s => s.name?.includes(searchKeyword.value)
+      || s.code?.includes(searchKeyword.value)
+  );
 });
 
-/* 관심종목 리스트 */
 const favoriteStocks = computed(() => {
-  if (!Array.isArray(store.favorites)) return [];
   return store.favorites
-  .map(f =>
-    stocks.value.find(s => s.code === f.stock)
-  )
-  .filter(Boolean);
+    .map(f => stocks.value.find(s => s.code === f.stock))
+    .filter(Boolean);
 });
 
-/* 이벤트 */
+/* ----------------------------- */
+/* event handlers */
+/* ----------------------------- */
 function onSearch(keyword) {
   searchKeyword.value = keyword;
 }
@@ -170,21 +206,32 @@ function onSearch(keyword) {
 function onSelectFromSearch(stock) {
   if (searchSelectedStock.value?.code === stock.code) {
     searchChartOpen.value = !searchChartOpen.value;
-  } else {
-    searchSelectedStock.value = stock;
-    searchChartOpen.value = true;
+    return;
   }
+  searchSelectedStock.value = { ...stock };
+  searchChartOpen.value = true;
 }
 
 function onSelectFromFavorite(stock) {
   if (favoriteSelectedStock.value?.code === stock.code) {
     favoriteChartOpen.value = !favoriteChartOpen.value;
-  } else {
-    favoriteSelectedStock.value = stock;
-    favoriteChartOpen.value = true;
+    return;
   }
+  favoriteSelectedStock.value = { ...stock };
+  favoriteChartOpen.value = true;
+}
+
+function updateSearchStockPrice(payload) {
+  if (!searchSelectedStock.value) return;
+  Object.assign(searchSelectedStock.value, payload);
+}
+
+function updateFavoriteStockPrice(payload) {
+  if (!favoriteSelectedStock.value) return;
+  Object.assign(favoriteSelectedStock.value, payload);
 }
 </script>
+
 
 <style scoped>
 .page-container {

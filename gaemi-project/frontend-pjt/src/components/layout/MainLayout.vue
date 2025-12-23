@@ -120,6 +120,7 @@
 import api from "@/api/axios";
 import { RouterView, RouterLink, useRouter, useRoute } from "vue-router";
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import { useNotificationSocketStore } from "@/stores/notificationSocketStore";
 
 import { useFavoritesStore } from "@/stores/favoritesStore.js";
 import { useChatbotStore } from "@/stores/chatbotStore";
@@ -132,6 +133,9 @@ import ChatbotPanel from "@/components/chat/ChatbotPanel.vue";
 import ToastStack from "@/components/toast/ToastStack.vue";
 
 import { logout as logoutApi } from "@/api/auth";
+
+const notificationSocketStore = useNotificationSocketStore();
+
 const favoritesStore = useFavoritesStore();
 const chatbotStore = useChatbotStore();
 const toastStore = useToastStore();
@@ -231,6 +235,10 @@ const fetchMe = async () => {
       isLogin: true,
     };
 
+    if (user.value?.id) {
+      notificationSocketStore.connect(user.value.id);
+    }
+
   } catch (err) {
     console.error("users/me 실패", err);
     user.value = null;
@@ -266,6 +274,9 @@ const toggleDropdown = () => {
 
 const logout = async () => {
   await logoutApi();
+
+  notificationSocketStore.disconnect();
+
   dropdownOpen.value = false;
   alert("로그아웃 되었습니다.");
   router.push("/login");

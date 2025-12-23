@@ -68,114 +68,148 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted } from 'vue';
-import api from '@/api/axios';
+import { ref, computed, watch, onMounted } from "vue";
+import api from "@/api/axios";
+import { useChartSocketStore } from "@/stores/chartSocketStore";
 
+/* emit */
+const emit = defineEmits(["updatePrice"]);
+
+/* props */
 const props = defineProps({
   stock: { type: Object, required: true },
 });
 
+/* range */
 const ranges = [
-  { label: '1D', value: '1D' },
-  { label: '1W', value: '1W' },
-  { label: '1M', value: '1M' },
-  { label: '3M', value: '3M' },
+  { label: "1D", value: "1D" },
+  { label: "1W", value: "1W" },
+  { label: "1M", value: "1M" },
+  { label: "3M", value: "3M" },
 ];
 
-const selectedRange = ref('1W');
-const xLabels = ref([]);
-const prices = ref([]);
-const volumes = ref([]);
+const selectedRange = ref("1D");
 
-const maxPrice = computed(() =>
-  prices.value.length ? Math.max(...prices.value) : 0
-);
-const minPrice = computed(() =>
-  prices.value.length ? Math.min(...prices.value) : 0
-);
-const maxVolume = computed(() =>
-  volumes.value.length ? Math.max(...volumes.value) : 1
-);
+/* ===============================
+   📦 상태 정의 (전부 선언!)
+   =============================== */
+const historyPrices = ref([]);
+const realtimePrices = ref([]);
 
+const volumes = ref([]);   // 🔥 더미용 (UI 안 깨지게)
+const xLabels = ref([]);   // 🔥 더미용
 
+/* socket */
+const chartSocketStore = useChartSocketStore();
+
+/* 실제 차트 가격 */
+const prices = computed(() => [
+  ...historyPrices.value,
+  ...realtimePrices.value,
+]);
+
+/* ===============================
+   📊 과거 데이터
+   =============================== */
 const fetchChartData = async () => {
   if (!props.stock?.code) return;
+
+  historyPrices.value = [];
+  realtimePrices.value = [];
+  volumes.value = [];
+  xLabels.value = [];
 
   try {
     const res = await api.get(
       `stocks/${props.stock.code}/chart/`,
       {
         params: {
-          range: selectedRange.value.toLowerCase(), // 1d, 1w, 1m
-          interval: '1d', // 지금은 고정 (나중에 수정해도 됨)
+          range: selectedRange.value.toLowerCase(),
+          interval: "1d",
         },
       }
     );
 
-    const data = res.data;
+    historyPrices.value = (res.data ?? [])
+      .map(d => Number(d.close ?? d.price))
+      .filter(Number.isFinite);
 
-    const parsed = (Array.isArray(data) ? data : []).map(d => {
-      const price = Array.isArray(d.y) ? Number(d.y[3]) : Number(d.close ?? d.price);
-      const volume = Number(d.v);
+    xLabels.value = historyPrices.value.map((_, i) => `D-${i}`);
+    volumes.value = historyPrices.value.map(() => 1);
 
-      return {
-        price: Number.isFinite(price) ? price : null,
-        volume: Number.isFinite(volume) ? volume : null,
-        label: d.x,
-      };
-    }).filter(d => d.price !== null);
-
-    prices.value = parsed.map(d => d.price);
-    volumes.value = parsed.map(d => d.volume ?? 0);
-
-    xLabels.value = parsed.map(d => {
-      const date = new Date(d.label);
-      return `${date.getMonth() + 1}/${date.getDate()}`;
-    });
   } catch (e) {
-    console.error('📉 chart fetch error', e);
+    console.error("📉 chart fetch error", e);
   }
-
-  console.log({
-    prices: prices.value,
-    volumes: volumes.value,
-    xLabels: xLabels.value,
-  });
-
 };
-onMounted(fetchChartData);
 
-watch(selectedRange, () => {
-  fetchChartData();
+/* ===============================
+   📡 실시간 WebSocket
+   =============================== */
+watch(
+  () => chartSocketStore.ticks,
+  (ticks) => {
+    if (!ticks.length) return;
+
+    const last = ticks[ticks.length - 1];
+    const price = Number(last.price);
+    const rate = Number(last.rate ?? 0);
+
+    if (!Number.isFinite(price)) return;
+
+    realtimePrices.value.push(price);
+    volumes.value.push(1);
+    xLabels.value.push(new Date().toLocaleTimeString());
+
+    if (realtimePrices.value.length > 20) {
+      realtimePrices.value.shift();
+      volumes.value.shift();
+      xLabels.value.shift();
+    }
+
+    emit("updatePrice", {
+      price,
+      change: Math.round((price * rate) / 100),
+      changeRate: rate,
+    });
+  }
+);
+
+/* ===============================
+   lifecycle
+   =============================== */
+onMounted(async () => {
+  await fetchChartData();
 });
 
+/* range 변경 */
+watch(selectedRange, async () => {
+  await fetchChartData();
+});
+
+/* ===============================
+   SVG 계산
+   =============================== */
 const linePoints = computed(() => {
-  if (prices.value.length < 2) return '';
+  if (prices.value.length < 2) return "";
 
-  const width = 100;
-  const height = 40;
-
-  const max = maxPrice.value;
-  const min = minPrice.value;
-  const range = max - min;
-
-  if (!Number.isFinite(range) || range <= 0) return '';
-
-  const stepX = width / (prices.value.length - 1);
+  const max = Math.max(...prices.value);
+  const min = Math.min(...prices.value);
+  const range = max - min || 1;
+  const stepX = 100 / (prices.value.length - 1);
 
   return prices.value
     .map((p, i) => {
-      if (!Number.isFinite(p)) return null;
-
       const x = i * stepX;
-      const y = height - ((p - min) / range) * (height - 4) - 2;
+      const y = 40 - ((p - min) / range) * 36 - 2;
       return `${x},${y}`;
     })
-    .filter(Boolean)
-    .join(' ');
+    .join(" ");
 });
 
-
+/* 거래량 최대값 (UI용) */
+const maxVolume = computed(() =>
+  volumes.value.length ? Math.max(...volumes.value) : 1
+);
 </script>
 
 <style scoped>
