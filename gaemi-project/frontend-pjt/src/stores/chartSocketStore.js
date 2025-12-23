@@ -36,25 +36,29 @@ export const useChartSocketStore = defineStore("chartSocket", {
           return;
         }
 
-        if (msg.type === "chart_update") {
-          const d = msg.data ?? msg;
-          if (d.current_price != null) {
-            this.ticks.push({
-              price: d.current_price,
-              rate: d.rate,
-              timestamp: d.timestamp,
-              volume: Number(d.tick_volume ?? 0),
-            });
-          }
-          
-          if (this.ticks.length > 200) this.ticks.shift();
-        }
+        if (msg?.type !== "chart_update") return;
+        
+        const d = msg.data ?? msg;
+
+        const price = Number(d.price ?? d.current_price);
+        const rate = Number(d.rate ?? 0);
+        const timestamp = Number(d.timestamp ?? Date.now());
+        const volume = Number(d.volume ?? d.tick_volume ?? d.v ?? 0);
+        
+        if (!Number.isFinite(price)) return;
+
+        this.ticks.push({ price, rate, timestamp, volume });
+        if (this.ticks.length > 200) this.ticks.shift();
       };
 
       this.socket.onclose = () => {
         this.isConnected = false;
         this.socket = null;
         console.log("🔌 Chart WebSocket closed");
+      };
+
+      this.socket.onerror = (e) => {
+        console.log("❌ Chart WebSocket error:", e);
       };
     },
 
