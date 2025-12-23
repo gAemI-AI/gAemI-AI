@@ -331,9 +331,85 @@ services:
       - redis
     restart: on-failure
 
+  # [Infra] 1. Hadoop Namenode (HDFS 메인)
+  hdfs:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: gaemi_namenode
+    platform: linux/amd64
+    ports:
+      - "9870:9870" # Web UI 포트
+      - "9000:9000" # RPC 포트
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://hdfs:9000
+      - HDFS_CONF_dfs_replication=1
+      - HDFS_CONF_dfs_permissions_enabled=false # 권한 체크 끄기 (개발용)
+
+  # [Infra] 1-2. Hadoop Datanode (실제 데이터 저장소)
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: gaemi_datanode
+    platform: linux/amd64
+    depends_on:
+      - hdfs
+    environment:
+      - SERVICE_PRECONDITION=hdfs:9870
+      - CORE_CONF_fs_defaultFS=hdfs://hdfs:9000
+      - HDFS_CONF_dfs_replication=1
+      - HDFS_CONF_dfs_permissions_enabled=false
+      
+  # [Infra] 2. Airflow DB (Metadata 저장소)
+  airflow-db:
+    image: postgres:13
+    container_name: gaemi_airflow_db
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - airflow_db_data:/var/lib/postgresql/data
+
+  # [Infra] 3. Airflow Webserver & Scheduler
+  airflow:
+    # image: apache/airflow:2.7.1
+    build:
+      context: ./data-pjt/airflow
+      dockerfile: Dockerfile # 내가 만든 Dockerfile로 빌드
+    container_name: gaemi_airflow
+    user: "${AIRFLOW_UID:-50000}:0"
+    depends_on:
+      - airflow-db
+      - hdfs
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - AIRFLOW__CORE__FERNET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False # 예제 DAG 끄기
+      - _AIRFLOW_DB_UPGRADE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=admin
+      - _AIRFLOW_WWW_USER_PASSWORD=admin
+      # 커스텀 환경변수 추가
+      - GAEMI_DB_HOST=db
+      - GAEMI_DB_NAME=gaemi_ai
+      - GAEMI_DB_USER=gaemi
+      - GAEMI_DB_PASSWORD=gaemigaemi11
+      - GAEMI_HDFS_URL=http://gaemi_namenode:9870 
+      - GAEMI_HDFS_USER=root
+      - GAEMI_ES_HOST=http://elasticsearch:9200
+    volumes:
+      - ./data-pjt/airflow/dags:/opt/airflow/dags # DAG 파일 연동
+      - ./data-pjt/airflow/logs:/opt/airflow/logs
+      - ./data-pjt/airflow/plugins:/opt/airflow/plugins
+    ports:
+      - "8082:8080" # 8080 포트는 겹침 -> 8082로 변경
+    # 시작 시 DB 마이그레이션 + 관리자 계정 생성 + 웹서버/스케줄러 실행
+    command: bash -c "airflow db migrate && airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin || true && airflow webserver & airflow scheduler"
 # 볼륨 정의: 컨테이너가 꺼져도 사라지지 않는 외장하드
 volumes:
   postgres_data: # DB 데이터 저장
   zookeeper_data:
   kafka_data: # Kafka 메시지 저장
   esdata: # 검색 엔진 데이터 저장
+  airflow_db_data: # airflow 데이터 저장

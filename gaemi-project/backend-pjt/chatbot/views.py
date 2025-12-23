@@ -83,7 +83,7 @@ class ChatbotRAGView(APIView):
                     except:
                         pass
                 
-                content = source.get('scraped_text', '')[:300] 
+                content = source.get('scraped_text', '')
                 context_text += f"[{date_str}] {source.get('title')}\n내용: {content}\n\n"
 
             # 시스템 프롬프트 (전문가 페르소나)

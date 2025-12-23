@@ -24,6 +24,7 @@ from config import *
 from utils.scraping import scrape_and_format
 from utils.openai_client import get_embeddings_batch
 from utils.es_connector import save_news_to_es
+from utils.llm_analyzer import analyze_news_batch
 
 # -----------------------------------------------------------------------
 #  중복 제거 필터 
@@ -67,21 +68,51 @@ class BatchEmbeddingWindow(ProcessWindowFunction):
             return
 
         print(f"[Batch Window] {len(news_list)}개 뉴스 처리 시작")
+        
+        # 1. AI 요약 및 감성 분석 수행 (선행 작업)
+        #   - 뉴스 리스트 통째로 넘겨서 분석 결과 리스트 받기
+        analysis_results = analyze_news_batch(news_list)
 
-        # 1. 임베딩할 텍스트 추출 ('scraped_text' 필드) -> 리스트로 변환
-        texts_to_embed = [item['scraped_text'] for item in news_list]
+        # 2. 임베딩할 텍스트 준비 (요약본 우선 사용)
+        texts_to_embed = []
+        
+        for i, item in enumerate(news_list):
+            # 분석 결과 가져오기 (인덱스 매칭)
+            summary_list = []
+            if i < len(analysis_results):
+                summary_list = analysis_results[i].get('summary', [])
+            
+            # A. 요약본이 정상적으로 있다면 -> 요약본을 합쳐서 임베딩 텍스트로 사용
+            if summary_list and isinstance(summary_list, list) and len(summary_list) > 0:
+                # ["요약1", "요약2"] -> "요약1. 요약2." (하나의 문장으로 합침)
+                combined_summary = " ".join(summary_list)
+                texts_to_embed.append(combined_summary)
+            
+            # B. 요약 실패(빈 리스트)했거나 에러가 났다면 -> 원래 scraped_text 사용 (Fallback)
+            else:
+                print(f"요약 실패로 원문 임베딩 사용: {item.get('news_id')}")
+                texts_to_embed.append(item.get('scraped_text', ''))
 
-        # 2. 텍스트만 뽑아 한 번에 OpenAI API 호출
+        # 3. 벡터 생성 (요약본 기반)
         vectors = get_embeddings_batch(texts_to_embed)
 
-        # 3. 결과 매핑 (기존 데이터에 벡터 추가)
+        # 4. 결과 병합 (ES 저장용)
         for i, news_item in enumerate(news_list):
-            if i < len(vectors) and vectors[i]: # 인덱스 범위 내 + vector 결과값이 있는 경우
-                news_item['vector'] = vectors[i] # 벡터 필드 추가
-                news_item['scraped_text'] = texts_to_embed[i] # 본문 내용 저장 (데이터 디버깅을 위해 살려둠 -> 삭제 가능)
-    
+            # (1) 분석 결과 병합
+            if i < len(analysis_results):
+                news_item['summary'] = analysis_results[i]['summary']
+                news_item['sentiment'] = analysis_results[i]['sentiment']
             else:
-                news_item['vector'] = [] # 실패 시 빈 리스트
+                news_item['summary'] = []
+                news_item['sentiment'] = "NEUTRAL"
+
+            # (2) 임베딩 결과 병합
+            if i < len(vectors) and vectors[i]:
+                news_item['vector'] = vectors[i]
+                # (선택사항) 디버깅용으로 '무엇을 임베딩했는지' 저장해두면 나중에 편합니다.
+                news_item['scraped_text'] = texts_to_embed[i] 
+            else:
+                news_item['vector'] = []
 
             # 다음 단계(Sink)로 내보냄
             yield news_item
@@ -132,7 +163,7 @@ def run():
         try:
             data = json.loads(raw_json) # json 불러오기
             full_text = scrape_and_format(data['link'], data['title'])
-            data['scraped_text'] = full_text # 임시 필드에 저장
+            data['scraped_text'] = full_text # 원문 저장
             return data
         
         except Exception as e:
