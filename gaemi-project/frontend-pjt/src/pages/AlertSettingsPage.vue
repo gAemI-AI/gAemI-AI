@@ -207,6 +207,7 @@ function toggleAlert(item) {
   alertsStore.toggleAlert(item.id);
 }
 
+/* 알림 생성 */
 function addAlert(alert) {
   const stockObj = favoriteStocks.value.find(s => s.code === alert.stock);
   alertsStore.addAlert({
@@ -217,6 +218,7 @@ function addAlert(alert) {
   });
 }
 </script>
+
 
 <style scoped>
 /* 기존 스타일 그대로 유지 */

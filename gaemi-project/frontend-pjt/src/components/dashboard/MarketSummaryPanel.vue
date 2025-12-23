@@ -60,6 +60,8 @@
 import { onMounted } from "vue";
 import { useMarketStore } from "@/stores/marketStore";
 
+console.log("🔥 MarketSummaryPanel script loaded");
+
 const market = useMarketStore();
 
 onMounted(() => {

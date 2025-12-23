@@ -125,6 +125,20 @@ const searchChartOpen = ref(false);
 /* 관심종목 관련 상태 */
 const favoriteSelectedStock = ref(null);
 const favoriteChartOpen = ref(false);
+const stocks = ref([]);
+
+watch(
+  () => store.favorites,
+  (newFavorites) => {
+    if (
+      favoriteSelectedStock.value &&
+      !newFavorites.some(f => f.stock === favoriteSelectedStock.value.code)
+    ) {
+      favoriteSelectedStock.value = null;
+      favoriteChartOpen.value = false;
+    }
+  }
+);
 
 /* Watchers */
 watch(

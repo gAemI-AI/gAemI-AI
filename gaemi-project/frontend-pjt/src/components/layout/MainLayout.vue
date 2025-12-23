@@ -107,6 +107,7 @@
 </template>
 
 <script setup>
+import api from "@/api/axios";
 import { RouterView, RouterLink, useRouter, useRoute } from "vue-router";
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from "vue";
 import { useFavoritesStore } from "@/stores/favoritesStore.js";
@@ -237,6 +238,9 @@ function flushUnshownEvents() {
     localStorage.setItem(lastToastKey.value, newest.triggeredAt);
   }
 }
+const fetchMe = async () => {
+  try {
+    const res = await api.get("/users/me/");
 
 onMounted(() => {
   favoritesStore.loadFromLocal();
@@ -258,8 +262,8 @@ const toggleDropdown = () => {
   dropdownOpen.value = !dropdownOpen.value;
 };
 
-const logout = () => {
-  localStorage.removeItem("user");
+const logout = async () => {
+  await logoutApi();
   dropdownOpen.value = false;
   router.push("/login");
 };

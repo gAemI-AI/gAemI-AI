@@ -46,6 +46,7 @@
 <script setup>
 import { ref, watch, nextTick, onMounted } from "vue";
 import { useChatbotStore } from "@/stores/chatbotStore";
+import { marked } from "marked";
 
 const chatbotStore = useChatbotStore();
 const input = ref("");

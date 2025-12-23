@@ -1,10 +1,11 @@
 // src/stores/favoritesStore.js
 import { defineStore } from "pinia";
+import api from "@/api/axios";
 
 export const useFavoritesStore = defineStore("favorites", {
   state: () => ({
-    // ✔ 항상 종목 "코드"만 저장하는 방식!
     favorites: [],
+    isLoaded: false,
   }),
 
   actions: {
@@ -35,9 +36,8 @@ export const useFavoritesStore = defineStore("favorites", {
 
     loadFromLocal() {
       const saved = localStorage.getItem("favorites");
-      if (saved) {
-        this.favorites = JSON.parse(saved);
-      }
+      this.favorites = saved ? JSON.parse(saved) : [];
+      this.isLoaded = true;
     },
 
     // ⭐ 관심종목 추가
@@ -53,26 +53,31 @@ export const useFavoritesStore = defineStore("favorites", {
       if (this.favorites.includes(code)) {
         this.favorites = this.favorites.filter((c) => c !== code);
       } else {
-        this.favorites.push(code);
+        await this.addFavorite(stockCode);
       }
-      this.saveToLocal();
     },
 
-    // ⭐ 관심종목 삭제
-    removeFavorite(code) {
-      this.favorites = this.favorites.filter((c) => c !== code);
-      this.saveToLocal();
+    async addFavorite(stockCode) {
+      try {
+        if (this.favorites.some(f => f.stock === stockCode)) return;
+
+        await api.post("/watchlist/", {
+          stock: stockCode, // ⭐ 핵심
+        });
+
+        await this.fetchWatchlist();
+      } catch (err) {
+        console.error("관심종목 추가 실패", err);
+      }
     },
 
-    // ⭐ 로그인 시 로드
-    loadFavorites(list) {
-      this.favorites = [...list];
-    },
-
-    // ⭐ 로컬 저장
-    saveToLocal() {
-      localStorage.setItem("favorites", JSON.stringify(this.favorites));
+    async removeFavorite(stockCode) {
+      try {
+        await api.delete(`/watchlist/${stockCode}/`);
+        await this.fetchWatchlist();
+      } catch (err) {
+        console.error("관심종목 삭제 실패", err);
+      }
     },
   },
 });
-

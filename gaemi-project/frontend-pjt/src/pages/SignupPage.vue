@@ -44,7 +44,7 @@
               <input
                 :type="showPw1 ? 'text' : 'password'"
                 v-model="form.password"
-                placeholder="비밀번호 (문자+숫자 6자 이상)"
+                placeholder="비밀번호 (문자+숫자 8자 이상)"
               />
               <button class="icon-btn" @click="showPw1 = !showPw1">
                 <img :src="showPw1 ? eyeClosed : eyeOpen" class="eye-icon" />
@@ -52,10 +52,11 @@
             </div>
 
             <p v-if="passwordStatus === 'invalid'" class="error-msg">
-              ❌ 비밀번호는 문자와 숫자를 포함한 6자 이상이어야 합니다.
+              ❌ 비밀번호는 문자와 숫자를 포함한 8자 이상이어야 합니다.
             </p>
-            <p v-if="passwordStatus === 'valid'" class="success-msg">
-              ✔ 사용 가능한 비밀번호입니다.
+
+            <p v-else-if="passwordStatus === 'common'" class="error-msg">
+              ⚠ 너무 흔한 비밀번호입니다.
             </p>
           </div>
 
@@ -172,7 +173,7 @@
 </template>
 
 <script setup>
-/* 기존 script 코드 그대로 — 수정 없음 */
+import axios from "axios";
 import { ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { STOCK_LIST } from "@/data/stocks.js";
@@ -205,27 +206,29 @@ const form = ref({
 /* validation, watch, toggle, submit — 전체 그대로 유지 */
 const usernameStatus = ref(null);
 const nicknameStatus = ref(null);
-const EXIST_USERNAMES = ["admin", "test", "gaemi"];
-const EXIST_NICKNAMES = ["철수", "영희", "주연"];
 
 const checkUsername = () => {
-  if (!form.value.username.trim()) return;
-  usernameStatus.value = EXIST_USERNAMES.includes(form.value.username)
-    ? "exists" : "ok";
+  const username = form.value.username.trim();
+  if (!username) return;
+
+  usernameStatus.value = "ok";
 };
 
 const checkNickname = () => {
-  if (!form.value.nickname.trim()) return;
-  nicknameStatus.value = EXIST_NICKNAMES.includes(form.value.nickname)
-    ? "exists" : "ok";
+  const nickname = form.value.nickname.trim();
+  if (!nickname) return;
+
+  nicknameStatus.value = "ok";
 };
+
 
 /* 비밀번호 + 일치 검증 */
 const passwordStatus = ref(null);
+const passwordMessage = ref("");
 const passwordMatchStatus = ref(null);
 
 const isValidPassword = (pw) => {
-  if (!pw || pw.length < 6) return false;
+  if (!pw || pw.length < 8) return false;
   return /[A-Za-z]/.test(pw) && /[0-9]/.test(pw);
 };
 

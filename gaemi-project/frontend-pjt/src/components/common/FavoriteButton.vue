@@ -18,7 +18,7 @@ const isLoading = ref(false);
 
 // ✔ store는 코드 기반으로 저장하므로 코드 비교만 하면 됨!
 const isFavorite = computed(() =>
-  store.favorites.includes(props.stock.code)
+  favoritesStore.favorites.some(f => f.stock === props.stock.code)
 );
 
 async function toggleFavorite() {

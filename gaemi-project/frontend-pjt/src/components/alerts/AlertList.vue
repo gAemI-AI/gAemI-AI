@@ -51,7 +51,7 @@
 defineProps({
   items: { type: Array, required: true },
 });
-defineEmits(["toggle", "remove"]);
+defineEmits(["remove"]);
 </script>
 
 <style scoped>
