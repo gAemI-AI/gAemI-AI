@@ -1,4 +1,5 @@
 from rest_framework import generics # ListAPIView: 단순 조회 업무를 위한 자동화된 로봇
+from django.db import models
 from .models import StockMaster
 from .serializers import StockMasterSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -13,6 +14,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from elasticsearch import Elasticsearch
+from rest_framework.permissions import IsAuthenticated
+from .models import WeeklyReport, StockMaster
+from watchlist.models import Watchlist  # Watchlist 모델 임포트 필요 (경로 확인 필요)
+from .serializers import WeeklyReportSerializer
 
 # 주식 목록 조회 전용 뷰 (GET)
 class StockListView(generics.ListAPIView):
@@ -230,3 +235,39 @@ class MarketIndexView(APIView):
             print(f"🚨 Market Index Error: {e}")
             # 에러 발생 시 500 대신 빈 배열 반환 (프론트엔드 보호)
             return Response([], status=status.HTTP_200_OK)
+        
+
+# 주간 리포트 조회 API
+class WeeklyReportView(APIView):
+    # 로그인한 사용자만 볼 수 있음
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        
+        # 1. 사용자의 관심 종목(Watchlist) 가져오기
+        #    - values_list를 써서 stock_id 리스트만 빠르게 추출 ['005930', '000660', ...]
+        interested_stock_ids = Watchlist.objects.filter(user=user).values_list('stock_id', flat=True)
+        
+        if not interested_stock_ids:
+            return Response([], status=status.HTTP_200_OK)
+
+        # 2. 해당 종목들의 '최신' 리포트 조회
+        #    - 이번 주 리포트만 가져오기 위해 start_date 기준 내림차순 정렬 후 Distinct?
+        #    - Django ORM에서는 distinct('stock')와 order_by를 조합해서 종목별 최신 1개만 뽑는 게 까다로울 수 있음
+        #    - 간단하게: "가장 최근 start_date"를 가진 리포트들만 필터링
+        
+        # (전략) 가장 최근에 생성된 리포트의 시작일(start_date)을 먼저 찾음
+        latest_date = WeeklyReport.objects.aggregate(max_date=models.Max('start_date'))['max_date']
+        
+        if not latest_date:
+            return Response([], status=status.HTTP_200_OK)
+
+        # (실행) 관심 종목이면서 && 시작일이 가장 최근인 리포트들 조회
+        reports = WeeklyReport.objects.filter(
+            stock_id__in=interested_stock_ids,
+            start_date=latest_date
+        ).select_related('stock') # N+1 문제 방지 (stock 정보 미리 로딩)
+        
+        serializer = WeeklyReportSerializer(reports, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

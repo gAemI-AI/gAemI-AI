@@ -76,24 +76,37 @@ def get_target_stocks(spark):
 def get_weekly_prices(spark, start_dt, end_dt):
     """
     Elasticsearch 'raw-stocks'에서 주간 데이터 집계
+    (timestamp = epoch millis 기준, OS 무관)
     """
+
+    # ✅ 뉴스 ES와 완전히 동일한 시간 변환 패턴
+    start_ts = int(datetime.combine(start_dt, datetime.min.time()).timestamp() * 1000)
+    end_ts = int(datetime.combine(end_dt, datetime.max.time()).timestamp() * 1000)
+
     es_query = {
         "query": {
             "range": {
                 "timestamp": {
-                    "gte": start_dt.isoformat(),
-                    "lte": end_dt.isoformat()
+                    "gte": start_ts,
+                    "lte": end_ts
                 }
             }
         }
     }
 
     try:
-        raw_df = spark.read.format("org.elasticsearch.spark.sql") \
-            .option("es.resource", "raw-stocks") \
-            .option("es.query", json.dumps(es_query)) \
+        raw_df = (
+            spark.read.format("org.elasticsearch.spark.sql")
+            .option("es.resource", "raw-stocks")
+            .option("es.query", json.dumps(es_query))
+            # 🔒 안전장치 (타입 꼬임 방지)
+            .option(
+                "es.read.field.include",
+                "stock_code,current_price,high_price,low_price,timestamp"
+            )
             .load()
-        
+        )
+
         if raw_df.rdd.isEmpty():
             print("⚠️ [ES] 해당 기간의 주가 데이터가 없습니다.")
             return None
@@ -101,7 +114,7 @@ def get_weekly_prices(spark, start_dt, end_dt):
         window_first = Window.partitionBy("stock_code").orderBy("timestamp")
         window_last = Window.partitionBy("stock_code").orderBy(col("timestamp").desc())
         window_agg = Window.partitionBy("stock_code")
-        
+
         price_stats = raw_df.select(
             col("stock_code"),
             first("current_price").over(window_first).alias("start_price"),
@@ -110,16 +123,15 @@ def get_weekly_prices(spark, start_dt, end_dt):
             spark_max("high_price").over(window_agg).alias("weekly_high")
         ).distinct()
 
-        result_df = price_stats.withColumn(
-            "weekly_return", 
+        return price_stats.withColumn(
+            "weekly_return",
             ((col("end_price") - col("start_price")) / col("start_price")) * 100
         )
-        
-        return result_df
+
     except Exception as e:
         print(f"❌ [ES Error] 주가 데이터 조회 실패: {e}")
         return None
-
+    
 def get_weekly_news(spark, target_stocks_df, start_dt, end_dt):
     """
     Elasticsearch 'news-summary'에서 뉴스 가져오기
@@ -183,8 +195,14 @@ def generate_ai_report(stock_name, return_rate, news_titles):
     관련 뉴스:
     {news_context}
 
-    위 데이터를 바탕으로 투자자에게 보낼 3줄 요약 주간 브리핑을 작성해줘. 
-    말투는 '해요체'로 친절하게 작성해. 수익률에 따라 긍정/부정 톤을 유지해.
+    위 데이터를 바탕으로 투자자에게 보낼 주간 리포트를 작성해줘. 
+    말투는 '해요체'로 친절하게 작성해. 
+    수익률에 따라 긍정/부정 톤을 유지해.
+
+    작성 원칙:
+            1. 전문가적 어조: "~해요" 대신 "~입니다/판단됩니다" 같은 명확하고 신뢰감 있는 어조를 사용하세요.
+            2. 구조화된 답변: 답변을 줄글로 쓰지 말고, 가독성 있게 Markdown 형식으로 소제목을 달아 작성하세요.
+            3. 객관성: 근거가 없는 내용은 추측하지 말고 사실 기반으로 내용을 구성하세요.
     """
     
     try:
