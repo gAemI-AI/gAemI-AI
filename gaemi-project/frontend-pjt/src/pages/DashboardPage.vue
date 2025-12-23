@@ -63,10 +63,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useFavoritesStore } from "@/stores/favoritesStore.js";
 import { useAlertsStore } from "@/stores/alertsStore";
-
+import api from "@/api/axios";
 import StockSearchBar from "@/components/dashboard/StockSearchBar.vue";
 import StockTickerRow from "@/components/dashboard/StockTickerRow.vue";
 import StockDetailCard from "@/components/dashboard/StockDetailCard.vue";
@@ -76,35 +76,7 @@ import MarketSummaryPanel from "@/components/dashboard/MarketSummaryPanel.vue";
 
 /* Pinia Store */
 const store = useFavoritesStore();
-
-// // 🔔 더미 알림 데이터 추가
-// const alerts = ref([
-//   {
-//     id: 1,
-//     statusClass: "working",
-//     stockName: "삼성전자",
-//     title: "목표가 도달했습니다.",
-//     time: "10:32",
-//   },
-//   {
-//     id: 2,
-//     statusClass: "done",
-//     stockName: "NAVER",
-//     title: "지정가 이하로 하락했습니다.",
-//     time: "09:15",
-//   },
-// ]);
 const alertsStore = useAlertsStore();
-
-/* ------------------------------- */
-/* 로그인 유저 관심종목 불러오기   */
-/* ------------------------------- */
-onMounted(() => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (user?.favorites) {
-    store.loadFavorites(user.favorites); // ⭐ Pinia에 로드
-  }
-});
 
 /* -------------------------------------- */
 /* 검색 관련 상태 */
@@ -118,39 +90,77 @@ const searchChartOpen = ref(false);
 /* -------------------------------------- */
 const favoriteSelectedStock = ref(null);
 const favoriteChartOpen = ref(false);
+const stocks = ref([]);
 
-/* -------------------------------------- */
-/* 더미 종목 데이터 */
-/* -------------------------------------- */
-const stocks = [
-  { code: '005930', name: '삼성전자', price: 70680, change: -1320, changeRate: -1.83 },
-  { code: '000660', name: 'SK하이닉스', price: 139421, change: 579, changeRate: 0.41 },
-  { code: '035420', name: 'NAVER', price: 215222, change: 3722, changeRate: 1.76 },
-  { code: '006400', name: '삼성SDI', price: 386519, change: -6481, changeRate: -1.65 },
-  { code: '005380', name: '현대차', price: 195740, change: 3240, changeRate: 1.68 }
-];
+watch(
+  () => store.favorites,
+  (newFavorites) => {
+    if (
+      favoriteSelectedStock.value &&
+      !newFavorites.some(f => f.stock === favoriteSelectedStock.value.code)
+    ) {
+      favoriteSelectedStock.value = null;
+      favoriteChartOpen.value = false;
+    }
+  }
+);
 
+/* ------------------------------- */
+/* 로그인 유저 관심종목 불러오기   */
+/* ------------------------------- */
+onMounted(async () => {
+  const hasToken = !!localStorage.getItem("accessToken");
+
+  if (hasToken) {
+    await Promise.all([
+      store.fetchWatchlist(),
+      alertsStore.fetchAlerts(),
+    ]);
+    
+  } else {
+    store.loadFromLocal();
+  }
+
+  try {
+    const res = await api.get("/stocks/");
+    stocks.value = res.data.map((s) => ({
+      code: s.stock_id,
+      stockId: s.stock_id,
+      name: s.stock_name,
+      marketType: s.market_type,
+
+      price: 0,
+      change: 0,
+      changeRate: 0,
+    }));
+
+  } catch (err) {
+    console.error('stocks 조회 실패', err);
+  }
+});
 /* -------------------------------------- */
 /* 검색 결과 필터링 */
 /* -------------------------------------- */
 const filteredStocks = computed(() => {
-  if (!searchKeyword.value) return stocks;
-  return stocks.filter(
-    (s) =>
-      s.name.includes(searchKeyword.value) ||
-      s.code.includes(searchKeyword.value)
-  );
+  if (!searchKeyword.value) return stocks.value;
+  const kw = searchKeyword.value;
+
+  return stocks.value.filter((s) => {
+    const name = s.name ?? "";
+    const code = s.code ?? "";
+    return name.includes(kw) || code.includes(kw);
+  });
 });
 
 /* 관심종목 리스트 */
-// const favoriteStocks = computed(() => store.favorites);
-const favoriteStocks = computed(() =>
-  store.favorites
-    .map(code => stocks.find(s => s.code === code))
-    .filter(Boolean)
-);
-
-
+const favoriteStocks = computed(() => {
+  if (!Array.isArray(store.favorites)) return [];
+  return store.favorites
+  .map(f =>
+    stocks.value.find(s => s.code === f.stock)
+  )
+  .filter(Boolean);
+});
 
 /* 이벤트 */
 function onSearch(keyword) {
@@ -184,6 +194,7 @@ function onSelectFromFavorite(stock) {
   /* 🔧 핵심: grid overflow 방지 */
   grid-template-columns: minmax(0, 3fr) minmax(0, 1.2fr);
   gap: 20px;
+  align-items: start;
 }
 
 .left-column {
@@ -200,8 +211,6 @@ function onSelectFromFavorite(stock) {
   flex-direction: column;
   gap: 16px;
 
-  /* 오른쪽 컬럼 자체는 스크롤 ❌ */
-  height: calc(100vh - 64px - 40px); 
 }
 
 

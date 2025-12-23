@@ -1,45 +1,77 @@
 // src/stores/favoritesStore.js
 import { defineStore } from "pinia";
+import api from "@/api/axios";
 
 export const useFavoritesStore = defineStore("favorites", {
   state: () => ({
-    // ✔ 항상 종목 "코드"만 저장하는 방식!
     favorites: [],
+    isLoaded: false,
   }),
 
   actions: {
+    /* =========================
+     * 로그인 상태 분기 로딩
+     * ========================= */
+    async fetchWatchlist() {
+      try {
+        const res = await api.get("/watchlist/");
+        // 백엔드 응답: [{ stock_code: "005930", ... }]
+        this.favorites = res.data;
+        this.isLoaded = true;
+      } catch (err) {
+        console.error("watchlist fetch 실패", err);
+        this.favorites = [];
+      }
+    },
+
     loadFromLocal() {
       const saved = localStorage.getItem("favorites");
-      if (saved) {
-        this.favorites = JSON.parse(saved);
-      }
+      this.favorites = saved ? JSON.parse(saved) : [];
+      this.isLoaded = true;
     },
 
-    // ⭐ 관심종목 토글 (코드 기반)
-    toggleFavorite(code) {
-      if (this.favorites.includes(code)) {
-        this.favorites = this.favorites.filter((c) => c !== code);
-      } else {
-        this.favorites.push(code);
-      }
-      this.saveToLocal();
-    },
-
-    // ⭐ 관심종목 삭제
-    removeFavorite(code) {
-      this.favorites = this.favorites.filter((c) => c !== code);
-      this.saveToLocal();
-    },
-
-    // ⭐ 로그인 시 로드
-    loadFavorites(list) {
-      this.favorites = [...list];
-    },
-
-    // ⭐ 로컬 저장
     saveToLocal() {
       localStorage.setItem("favorites", JSON.stringify(this.favorites));
     },
+
+    /* =========================
+     * 토글 (추가 / 삭제)
+     * ========================= */
+    async toggleFavorite(stockCode) {
+      const hasToken = !!localStorage.getItem("accessToken");
+
+      if (!hasToken) {
+        console.warn("비로그인 관심종목은 현재 미지원");
+        return;
+      }
+      if (this.favorites.some(f => f.stock === stockCode)) {
+        await this.removeFavorite(stockCode);
+      } else {
+        await this.addFavorite(stockCode);
+      }
+    },
+
+    async addFavorite(stockCode) {
+      try {
+        if (this.favorites.some(f => f.stock === stockCode)) return;
+
+        await api.post("/watchlist/", {
+          stock: stockCode, // ⭐ 핵심
+        });
+
+        await this.fetchWatchlist();
+      } catch (err) {
+        console.error("관심종목 추가 실패", err);
+      }
+    },
+
+    async removeFavorite(stockCode) {
+      try {
+        await api.delete(`/watchlist/${stockCode}/`);
+        await this.fetchWatchlist();
+      } catch (err) {
+        console.error("관심종목 삭제 실패", err);
+      }
+    },
   },
 });
-

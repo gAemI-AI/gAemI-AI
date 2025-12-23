@@ -177,9 +177,9 @@ class MarketIndexView(APIView):
             "size": 0,
             "aggs": {
                 "indices": {
-                    # Consumer에서 mapping한 대로 .keyword 필드 사용 필수
+                    # Consumer에서 mapping한 대로 .keyword 필드 사용 필수 -> 삭제
                     "terms": { 
-                        "field": "index_code.keyword", 
+                        "field": "index_code", 
                         "size": 10 # 현재는 3개이지만 확장 대비로 10개
                     },
                     "aggs": {

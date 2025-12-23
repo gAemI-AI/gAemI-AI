@@ -36,6 +36,7 @@
       <div class="chart-title">가격 추이</div>
       <svg viewBox="0 0 100 40" class="line-chart">
         <polyline
+          v-if="linePoints"
           :points="linePoints"
           fill="none"
           stroke-width="2"
@@ -67,7 +68,8 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
+import api from '@/api/axios';
 
 const props = defineProps({
   stock: { type: Object, required: true },
@@ -81,30 +83,99 @@ const ranges = [
 ];
 
 const selectedRange = ref('1W');
+const xLabels = ref([]);
+const prices = ref([]);
+const volumes = ref([]);
 
-// 더미 데이터 (나중에 API 응답으로 교체)
-const xLabels = ['11월 14일', '11월 15일', '11월 16일', '11월 17일', '11월 18일', '11월 19일'];
-const prices = [72000, 71500, 70500, 69800, 71000, 70680];
-const volumes = [900000, 1200000, 800000, 1000000, 1100000, 950000];
+const maxPrice = computed(() =>
+  prices.value.length ? Math.max(...prices.value) : 0
+);
+const minPrice = computed(() =>
+  prices.value.length ? Math.min(...prices.value) : 0
+);
+const maxVolume = computed(() =>
+  volumes.value.length ? Math.max(...volumes.value) : 1
+);
 
-const maxPrice = Math.max(...prices);
-const minPrice = Math.min(...prices);
-const maxVolume = Math.max(...volumes);
+
+const fetchChartData = async () => {
+  if (!props.stock?.code) return;
+
+  try {
+    const res = await api.get(
+      `stocks/${props.stock.code}/chart/`,
+      {
+        params: {
+          range: selectedRange.value.toLowerCase(), // 1d, 1w, 1m
+          interval: '1d', // 지금은 고정 (나중에 수정해도 됨)
+        },
+      }
+    );
+
+    const data = res.data;
+
+    const parsed = (Array.isArray(data) ? data : []).map(d => {
+      const price = Array.isArray(d.y) ? Number(d.y[3]) : Number(d.close ?? d.price);
+      const volume = Number(d.v);
+
+      return {
+        price: Number.isFinite(price) ? price : null,
+        volume: Number.isFinite(volume) ? volume : null,
+        label: d.x,
+      };
+    }).filter(d => d.price !== null);
+
+    prices.value = parsed.map(d => d.price);
+    volumes.value = parsed.map(d => d.volume ?? 0);
+
+    xLabels.value = parsed.map(d => {
+      const date = new Date(d.label);
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    });
+  } catch (e) {
+    console.error('📉 chart fetch error', e);
+  }
+
+  console.log({
+    prices: prices.value,
+    volumes: volumes.value,
+    xLabels: xLabels.value,
+  });
+
+};
+onMounted(fetchChartData);
+
+watch(selectedRange, () => {
+  fetchChartData();
+});
 
 const linePoints = computed(() => {
+  if (prices.value.length < 2) return '';
+
   const width = 100;
   const height = 40;
-  const stepX = width / (prices.length - 1);
-  const range = maxPrice - minPrice || 1;
 
-  return prices
+  const max = maxPrice.value;
+  const min = minPrice.value;
+  const range = max - min;
+
+  if (!Number.isFinite(range) || range <= 0) return '';
+
+  const stepX = width / (prices.value.length - 1);
+
+  return prices.value
     .map((p, i) => {
+      if (!Number.isFinite(p)) return null;
+
       const x = i * stepX;
-      const y = height - ((p - minPrice) / range) * (height - 4) - 2;
+      const y = height - ((p - min) / range) * (height - 4) - 2;
       return `${x},${y}`;
     })
+    .filter(Boolean)
     .join(' ');
 });
+
+
 </script>
 
 <style scoped>

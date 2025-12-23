@@ -1,5 +1,6 @@
 // src/stores/chatbotStore.js
 import { defineStore } from "pinia";
+import { askChatbot } from "@/api/chatbot";
 
 const STORAGE_KEYS = {
   OPEN: "chatbot_open",
@@ -142,14 +143,11 @@ export const useChatbotStore = defineStore("chatbot", {
       this.addUserMessage(userText);
 
       try {
-        // ✅ TODO: 실제 백엔드/LLM API 호출로 교체
-        // const res = await api.post("/chat", { message: userText });
-        // this.addAssistantMessage(res.data.answer);
+        const res = await askChatbot(userText);
+        this.addAssistantMessage(res.answer);
 
-        // 임시 mock 응답
-        await new Promise((r) => setTimeout(r, 250));
-        this.addAssistantMessage(`(임시응답) "${userText}"에 대한 답변입니다.`);
-      } catch {
+      } catch (err){
+        console.error(err);
         this.lastError = "챗봇 응답에 실패했습니다.";
       } finally {
         this.isLoading = false;

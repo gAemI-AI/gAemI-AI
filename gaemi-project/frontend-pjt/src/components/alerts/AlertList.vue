@@ -14,17 +14,18 @@
       <div v-for="item in items" :key="item.id" class="row">
         <div class="info">
           <div class="name">{{ item.stockName }}</div>
-          <div class="condition">{{ item.description }}</div>
+          <div class="condition">{{ item.title }}</div>
         </div>
         <div class="actions">
-          <label class="toggle">
+          <!-- <label class="toggle">
             <input
               type="checkbox"
               v-model="item.enabled"
               @change="$emit('toggle', item)"
             />
             <span class="slider"></span>
-          </label>
+          </label> -->
+          <span class="status">🟢</span>
           <button class="delete" @click="$emit('remove', item.id)">🗑️</button>
         </div>
       </div>
@@ -36,7 +37,7 @@
 defineProps({
   items: { type: Array, required: true },
 });
-defineEmits(["toggle", "remove"]);
+defineEmits(["remove"]);
 </script>
 
 <style scoped>
