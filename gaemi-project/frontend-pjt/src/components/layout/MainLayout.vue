@@ -1,151 +1,178 @@
 <template>
-    <!-- =========================
-         기존 레이아웃 (원본 유지)
-    ========================== -->
-    <div class="layout-root">
-      <header class="top-bar">
-        <!-- 로고 -->
-        <div class="logo-area">
-          <img src="@/assets/logo/gaemi.png" class="logo-img" />
-          <div class="logo-text">
-            <div class="title">gAemI</div>
-            <div class="subtitle">시간 없는 개미를 위한 AI 투자 파트너</div>
-          </div>
-        </div>
+  <div class="layout-root">
+    <header class="top-bar">
+      <div class="header-inner">
+        
+        <RouterLink to="/app/dashboard" class="logo-area">
+          <img src="@/assets/logo/gaemi.png" class="logo-img" alt="logo" />
+          <span class="brand-name">gAemI</span>
+        </RouterLink>
 
-        <!-- 탭 -->
-        <nav class="nav-tabs">
+        <nav class="nav-menu" ref="navMenuRef">
           <RouterLink
             to="/app/dashboard"
-            class="tab"
-            :class="{ active: $route.path.startsWith('/app/dashboard') }"
+            class="nav-item"
+            :class="{ active: route.path.startsWith('/app/dashboard') }"
           >
             대시보드
           </RouterLink>
 
-          <!-- <RouterLink
-            to="/app/ai-news"
-            class="tab"
-            :class="{ active: $route.path.startsWith('/app/ai-news') }"
-          >
-            AI 뉴스 분석
-          </RouterLink> -->
-          
           <RouterLink
             to="/app/chatbot"
-            class="tab"
-            :class="{ active: $route.path.startsWith('/app/chatbot') }"
+            class="nav-item"
+            :class="{ active: route.path.startsWith('/app/chatbot') }"
           >
             AI 챗봇
           </RouterLink>
 
-
           <RouterLink
             to="/app/alerts"
-            class="tab"
-            :class="{ active: $route.path.startsWith('/app/alerts') }"
+            class="nav-item"
+            :class="{ active: route.path.startsWith('/app/alerts') }"
           >
             알림 관리
           </RouterLink>
+          
+          <div class="nav-highlighter" :style="highlighterStyle"></div>
         </nav>
 
-        <!-- 오른쪽 영역 -->
-        <div class="right-icons">
-          <button class="icon-btn bell-btn" @click="bellOpen = !bellOpen">🔔</button>
-          <div v-if="bellOpen" class="alert-dropdown">
-            <!-- 헤더 -->
-            <div class="alert-head">
-              <span class="title">알림</span>
-              <span class="count">{{ alertEventsStore.count }}개</span>
-            </div>
+        <div class="right-tools">
+          
+          <div class="bell-wrapper">
+            <button class="icon-btn" @click="bellOpen = !bellOpen">
+              <span v-if="alertEventsStore.count > 0" class="bell-dot"></span>
+              <img src="@/assets/icons/bell.png" alt="알림" class="bell-icon" />
+            </button>
 
-            <!-- 리스트 -->
-            <div class="alert-list" v-if="alertEventsStore.latestEvents.length > 0">
-              <div
-                v-for="ev in alertEventsStore.latestEvents.slice(0, 20)"
-                :key="ev.id"
-                class="alert-item"
-              >
-                <div class="alert-main">
-                  <span class="stock">{{ ev.stockName }}</span>
-                  <span class="msg">
-                    {{ formatCondition(ev.condition, ev.target) }}
-                  </span>
+            <transition name="fade">
+              <div v-if="bellOpen" class="alert-dropdown">
+                <div class="alert-head">
+                  <span class="title">알림</span>
+                  <span class="count">{{ alertEventsStore.count }}</span>
                 </div>
-                <div class="time">{{ formatTime(ev.triggeredAt) }}</div>
+                <div class="alert-list" v-if="alertEventsStore.latestEvents.length > 0">
+                  <div
+                    v-for="ev in alertEventsStore.latestEvents.slice(0, 20)"
+                    :key="ev.id"
+                    class="alert-item"
+                    @click="bellOpen = false"
+                  >
+                    <div class="alert-content">
+                      <span class="stock-name">{{ ev.stockName }}</span>
+                      <span class="alert-desc">
+                        {{ formatCondition(ev.condition, ev.target) }} 조건 도달
+                      </span>
+                    </div>
+                    <span class="alert-time">{{ formatTime(ev.triggeredAt) }}</span>
+                  </div>
+                </div>
+                <div v-else class="empty-state">
+                  <div class="empty-text">새로운 알림이 없습니다</div>
+                </div>
               </div>
-            </div>
-
-            <!-- 비었을 때 -->
-            <div v-else class="empty">
-              아직 알림이 없어요.
-            </div>
+            </transition>
           </div>
 
-          <!-- 로그인 안됨 -->
-          <RouterLink v-if="!user" to="/login" class="login-btn">
+          <div v-if="user" class="user-profile" @click="toggleDropdown">
+            <div class="avatar-circle">{{ user.nickname[0] }}</div>
+            <span class="username">{{ user.nickname }}</span>
+            
+            <transition name="fade">
+              <div v-if="dropdownOpen" class="profile-dropdown">
+                <div class="profile-info">
+                  <span class="info-name">{{ user.nickname }}</span>
+                  <span class="info-id">@{{ user.username }}</span>
+                </div>
+                <div class="divider"></div>
+                <button class="menu-item logout" @click.stop="logout">로그아웃</button>
+              </div>
+            </transition>
+          </div>
+
+          <RouterLink v-else to="/login" class="login-link">
             로그인
           </RouterLink>
-
-          <!-- 로그인 됨 -->
-          <div v-else class="user-area">
-            <span class="username" @click="toggleDropdown">
-              {{ user.nickname }}
-            </span>
-
-            <div v-if="dropdownOpen" class="dropdown-box">
-              <p class="nickname-display">@{{ user.username }}</p>
-              <button class="logout-btn" @click="logout">로그아웃</button>
-            </div>
-          </div>
         </div>
-      </header>
+      </div>
+    </header>
 
-      <!-- 컨텐츠 -->
-      <main class="main-content">
-        <RouterView />
-      </main>
-    </div>
+    <main class="main-content">
+      <RouterView />
+    </main>
+  </div>
 
-    <!-- =========================
-         전역 UI (layout-root 밖)
-    ========================== -->
-    <ToastStack v-if="showToastsHere && toastStore.toasts.length > 0" />
-    <ChatbotFab />
-    <ChatbotPanel v-if="chatbotStore.isOpen" />
-
+  <ToastStack v-if="showToastsHere && toastStore.toasts.length > 0" />
+  <ChatbotFab />
+  <ChatbotPanel v-if="chatbotStore.isOpen" />
 </template>
 
 <script setup>
 import { RouterView, RouterLink, useRouter, useRoute } from "vue-router";
-import { ref, onMounted, onUnmounted, watch, computed } from "vue";
-
+import { ref, onMounted, onUnmounted, watch, computed, nextTick } from "vue";
 import { useFavoritesStore } from "@/stores/favoritesStore.js";
 import { useChatbotStore } from "@/stores/chatbotStore";
 import { useToastStore } from "@/stores/toastStore";
-
 import { useAlertEventsStore } from "@/stores/alertEventsStore";
 
 import ChatbotFab from "@/components/chat/ChatbotFab.vue";
 import ChatbotPanel from "@/components/chat/ChatbotPanel.vue";
 import ToastStack from "@/components/toast/ToastStack.vue";
 
+/* Stores & Router */
 const favoritesStore = useFavoritesStore();
 const chatbotStore = useChatbotStore();
 const toastStore = useToastStore();
-
 const alertEventsStore = useAlertEventsStore();
-
 const router = useRouter();
 const route = useRoute();
 
+/* UI State */
 const dropdownOpen = ref(false);
 const user = ref(null);
 const bellOpen = ref(false);
 
-/** ✅ 토스트를 보여줄 페이지 제한
- * - /app/dashboard, /app/chatbot, /app/alerts 에서만 토스트 표시
- */
+/* =========================================
+   ✅ 슬라이딩 메뉴바 로직
+========================================= */
+const navMenuRef = ref(null);
+const highlighterStyle = ref({
+  left: "0px",
+  width: "0px",
+  opacity: 0,
+});
+
+const updateHighlighter = async () => {
+  await nextTick();
+  if (!navMenuRef.value) return;
+
+  const activeLink = navMenuRef.value.querySelector(".nav-item.active");
+
+  if (activeLink) {
+    const menuRect = navMenuRef.value.getBoundingClientRect();
+    const linkRect = activeLink.getBoundingClientRect();
+
+    highlighterStyle.value = {
+      left: `${linkRect.left - menuRect.left}px`,
+      width: `${linkRect.width}px`,
+      opacity: 1,
+    };
+  } else {
+    highlighterStyle.value = { ...highlighterStyle.value, opacity: 0 };
+  }
+};
+
+watch(() => route.path, updateHighlighter, { immediate: true });
+
+onMounted(() => {
+  window.addEventListener("resize", updateHighlighter);
+});
+onUnmounted(() => {
+  window.removeEventListener("resize", updateHighlighter);
+});
+
+/* =========================================
+   기타 로직 (토스트, 알림 등)
+========================================= */
 const showToastsHere = computed(() => {
   const p = route.path;
   return (
@@ -155,64 +182,54 @@ const showToastsHere = computed(() => {
   );
 });
 
-/** ✅ (핵심) user별 마지막 토스트 처리 시점 저장 키 */
 const lastToastKey = computed(() => {
   const username = user.value?.username;
   return username ? `last_toast_at_${username}` : null;
 });
 
-/** ✅ 이벤트 1개를 토스트로 변환 */
 function toastFromEvent(ev) {
   return {
     type: "info",
     title: "알림 도착",
-    // event 구조에 맞춰 메시지 구성 (현재 alertEventsStore 예시 기반)
     message: `${ev.stockName} · ${ev.target}${ev.condition === "changeUp" || ev.condition === "changeDown" ? "%" : "원"} 조건 충족`,
   };
 }
+
 function formatCondition(condition, target) {
   switch (condition) {
-    case "gte":
-      return `${target}원 이상`;
-    case "lte":
-      return `${target}원 이하`;
-    case "changeUp":
-      return `${target}% 이상`;
-    case "changeDown":
-      return `${target}% 이하`;
-    default:
-      return "";
+    case "gte": return `${target}원 이상`;
+    case "lte": return `${target}원 이하`;
+    case "changeUp": return `${target}% 이상 상승`;
+    case "changeDown": return `${target}% 이상 하락`;
+    default: return "";
   }
 }
 
 function formatTime(iso) {
   const d = new Date(iso);
+  const now = new Date();
+  const diff = (now - d) / 1000 / 60;
+  if (diff < 1) return "방금 전";
+  if (diff < 60) return `${Math.floor(diff)}분 전`;
   return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-/** ✅ 로그인 직후/새 이벤트 도착 시, "안 띄운 이벤트만" 토스트로 띄우기 */
 function flushUnshownEvents() {
-  if (!user.value?.isLogin) return;                 // 로그인 상태 아니면 토스트 X
+  if (!user.value?.isLogin) return;
   if (!lastToastKey.value) return;
 
-  const lastShownAt = localStorage.getItem(lastToastKey.value); // ISO string or null
-
-  // 내 이벤트만 (나중에 서버 붙이면 event에 username/userId 필수)
+  const lastShownAt = localStorage.getItem(lastToastKey.value);
   const myEvents = alertEventsStore.latestEvents;
-
   const newOnes = myEvents.filter((ev) => {
     if (!lastShownAt) return true;
-    // triggeredAt이 lastShownAt 이후인 것만
     return new Date(ev.triggeredAt) > new Date(lastShownAt);
   });
 
-  // 오래된 것부터 순서대로 토스트 띄우기 (FIFO 자연스럽게)
   newOnes
     .slice()
     .sort((a, b) => new Date(a.triggeredAt) - new Date(b.triggeredAt))
     .forEach((ev) => toastStore.push(toastFromEvent(ev)));
 
-  // 마지막으로 처리한 시점 갱신 (가장 최신 이벤트 기준)
   if (newOnes.length > 0) {
     const newest = newOnes.reduce((acc, cur) =>
       new Date(cur.triggeredAt) > new Date(acc.triggeredAt) ? cur : acc
@@ -223,29 +240,19 @@ function flushUnshownEvents() {
 
 onMounted(() => {
   favoritesStore.loadFromLocal();
-
   const saved = localStorage.getItem("user");
   if (saved) user.value = JSON.parse(saved);
-
   chatbotStore.loadFromLocal();
 
-  if (
-    chatbotStore.messages.length > 0 &&
-    route.path.startsWith("/app/chatbot")
-  ) {
+  if (chatbotStore.messages.length > 0 && route.path.startsWith("/app/chatbot")) {
     chatbotStore.isOpen = true;
   }
-  // ✅ 로그인 후 들어왔을 때: "쌓인 알림" 토스트로 한번에 처리
   flushUnshownEvents();
 });
 
-// ✅ 새 이벤트가 들어올 때마다 토스트 처리
-watch(
-  () => alertEventsStore.events.length,
-  () => {
-    flushUnshownEvents();
-  }
-);
+watch(() => alertEventsStore.events.length, () => {
+  flushUnshownEvents();
+});
 
 const toggleDropdown = () => {
   dropdownOpen.value = !dropdownOpen.value;
@@ -254,16 +261,16 @@ const toggleDropdown = () => {
 const logout = () => {
   localStorage.removeItem("user");
   dropdownOpen.value = false;
-  alert("로그아웃 되었습니다.");
   router.push("/login");
 };
 
 function closeBell(e) {
-  // 클릭한 곳이 종버튼/드롭다운 내부면 닫지 않음
   if (e.target.closest(".alert-dropdown")) return;
-  if (e.target.closest(".bell-btn")) return;
-
+  if (e.target.closest(".bell-wrapper")) return;
+  if (e.target.closest(".user-profile")) return;
+  
   bellOpen.value = false;
+  dropdownOpen.value = false;
 }
 
 onMounted(() => {
@@ -273,247 +280,370 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener("click", closeBell);
 });
-
 </script>
 
-
 <style scoped>
+/* =========================
+   Layout & Reset
+========================== */
 .layout-root {
   min-height: 100vh;
-  background: #f5f6fa;
+  background: #f9fafb;
   display: flex;
   flex-direction: column;
 }
 
-/* 상단 바 */
+/* =========================
+   Top Bar (Header)
+========================== */
 .top-bar {
-  height: 64px;
-  padding: 0 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-bottom: 1px solid #e5e7eb;
+  height: 60px;
   background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
 }
 
-/* 로고 */
+.header-inner {
+  width: 100%;
+  max-width: 1400px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+}
+
+/* 1. Logo */
 .logo-area {
-  position: absolute;
-  left: 32px;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.logo-img {
-  width: 32px;
-  height: 32px;
-}
-.logo-text .title {
-  font-weight: 700;
-  font-size: 18px;
-}
-.logo-text .subtitle {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-/* 탭 */
-.nav-tabs {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  width: 100%;
-  max-width: 1400px;
-}
-.tab {
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 14px;
-  color: #6b7280;
   text-decoration: none;
-}
-.tab.active {
-  background: #2563eb;
-  color: white !important;
+  cursor: pointer;
 }
 
-/* 오른쪽 */
-.right-icons {
-  position: absolute;
-  right: 32px;
+.logo-img {
+  width: 28px;
+  height: 28px;
+}
+
+.brand-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #191f28;
+  letter-spacing: -0.5px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* =========================
+   2. Navigation
+========================== */
+.nav-menu {
+  display: flex;
+  gap: 2px;
+  position: relative;
+  height: 100%;
+}
+
+.nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  padding: 0 16px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #8b95a1;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  position: relative;
+  height: 100%;
 }
+
+.nav-item:hover {
+  color: #4e5968;
+}
+
+.nav-item.active {
+  color: #3182f6;
+}
+
+.nav-highlighter {
+  position: absolute;
+  bottom: 0;
+  height: 3px;
+  background-color: #3182f6;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  pointer-events: none;
+}
+
+
+/* 3. Right Tools */
+.right-tools {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.bell-wrapper {
+  position: relative;
+}
+
 .icon-btn {
   background: none;
   border: none;
+  /* font-size: 20px; 제거: 이미지로 대체 */
   cursor: pointer;
-  font-size: 20px;
-  padding: 6px;
-  border-radius: 6px;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
 .icon-btn:hover {
-  background: #f3f4f6;
+  background: #f2f4f6;
 }
 
-/* 로그인 버튼 */
-.login-btn {
-  padding: 6px 12px;
-  background: #2563eb;
-  color: white;
-  text-decoration: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-}
-.login-btn:hover {
-  background: #1d4ed8;
+/* ✅ 종 아이콘 이미지 스타일 */
+.bell-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  display: block;
 }
 
-/* 사용자 영역 */
-.user-area {
-  position: relative;
-  cursor: pointer;
-}
-.username {
-  padding: 6px 10px;
-  background: #eef2ff;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #374151;
-}
-
-/* 드롭다운 박스 */
-.dropdown-box {
+.bell-dot {
   position: absolute;
-  top: 36px;
-  right: 0;
-  width: 140px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  z-index: 50;
-}
-.nickname-display {
-  font-size: 12px;
-  color: #6b7280;
-  margin-bottom: 8px;
-}
-.logout-btn {
-  width: 100%;
-  padding: 6px 0;
+  top: 6px;
+  right: 6px;
+  width: 5px;
+  height: 5px;
   background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-}
-.logout-btn:hover {
-  background: #dc2626;
+  border-radius: 50%;
+  border: 2px solid white;
 }
 
-/* 컨텐츠 */
-.main-content {
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px 40px;
-  box-sizing: border-box;
-}
-/* 🔔 알림 드롭다운 */
+/* 알림 드롭다운 */
 .alert-dropdown {
   position: absolute;
-  top: 44px;          /* 종 버튼 바로 아래 */
-  right: 0;
+  top: 50px;
+  right: -10px;
   width: 320px;
-  max-height: 420px;
-
   background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
-
-  display: flex;
-  flex-direction: column;
+  border: 1px solid #e5e8eb;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   z-index: 100;
 }
 
-/* 헤더 */
 .alert-head {
+  padding: 16px;
+  border-bottom: 1px solid #f2f4f6;
   display: flex;
   justify-content: space-between;
   align-items: center;
-
-  padding: 12px 16px;
-  border-bottom: 1px solid #f1f5f9;
-  font-weight: 600;
 }
 
 .alert-head .title {
-  font-size: 14px;
+  font-weight: 700;
+  color: #191f28;
 }
 
 .alert-head .count {
   font-size: 12px;
-  color: #2563eb;
+  background: #3182f6;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
 }
 
-/* 리스트 */
 .alert-list {
+  max-height: 300px;
   overflow-y: auto;
 }
 
-/* 개별 알림 */
 .alert-item {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f9fafb;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  transition: background 0.2s;
   cursor: pointer;
 }
 
 .alert-item:hover {
-  background: #f8fafc;
+  background: #f9fafb;
 }
 
-.alert-main {
+.alert-content {
   display: flex;
-  gap: 6px;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.stock {
-  font-size: 12px;
-  font-weight: 600;
-  color: #2563eb;
-  background: #eef2ff;
-  padding: 2px 6px;
-  border-radius: 6px;
+.stock-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #333;
 }
 
-.msg {
+.alert-desc {
   font-size: 13px;
-  color: #374151;
+  color: #6b7684;
 }
 
-.time {
-  margin-top: 4px;
+.alert-time {
   font-size: 11px;
-  color: #9ca3af;
+  color: #adb5bd;
+  white-space: nowrap;
+  margin-top: 2px;
 }
 
-/* 비었을 때 */
-.empty {
-  padding: 24px;
+.empty-state {
+  padding: 40px 0;
   text-align: center;
-  font-size: 13px;
-  color: #9ca3af;
+}
+.empty-text {
+  font-size: 14px;
+  color: #8b95a1;
 }
 
+/* User Profile */
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.user-profile:hover {
+  background: #f2f4f6;
+}
+
+.avatar-circle {
+  width: 30px;
+  height: 30px;
+  background: #3182f6;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.username {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Profile Dropdown */
+.profile-dropdown {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  width: 200px;
+  background: white;
+  border: 1px solid #e5e8eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-info {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-name {
+  font-weight: 700;
+  color: #191f28;
+  font-size: 16px;
+}
+
+.info-id {
+  font-size: 13px;
+  color: #8b95a1;
+}
+
+.divider {
+  height: 1px;
+  background: #f2f4f6;
+  margin: 4px 0;
+}
+
+.menu-item {
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 12px;
+  font-size: 15px;
+  color: #4e5968;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.menu-item:hover {
+  background: #f2f4f6;
+}
+
+.menu-item.logout {
+  color: #f04452;
+}
+
+/* Login Link */
+.login-link {
+  font-size: 15px;
+  font-weight: 600;
+  color: #3182f6;
+  text-decoration: none;
+  padding: 8px 16px;
+  background: rgba(49, 130, 246, 0.1);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.login-link:hover {
+  background: rgba(49, 130, 246, 0.15);
+}
+
+/* Main Content */
+.main-content {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  flex: 1;
+}
+
+/* Animations */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
 </style>

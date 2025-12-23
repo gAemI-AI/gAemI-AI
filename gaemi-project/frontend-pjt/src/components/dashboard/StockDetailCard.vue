@@ -108,112 +108,247 @@ const linePoints = computed(() => {
 </script>
 
 <style scoped>
+/* ======================= */
+/*      카드 컨테이너      */
+/* ======================= */
 .detail-card {
   background: white;
   border-radius: 16px;
-  padding: 20px;
+  padding: 24px;
   border: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
+/* ======================= */
+/*       헤더           */
+/* ======================= */
 .detail-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .name {
   font-size: 18px;
   font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.4px;
 }
+
 .code {
-  margin-left: 4px;
+  margin-left: 8px;
   font-size: 12px;
+  font-weight: 600;
   color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
+
 .price-row {
-  margin-top: 8px;
+  margin-top: 12px;
   display: flex;
-  gap: 8px;
+  gap: 12px;
   align-items: baseline;
+  flex-wrap: wrap;
 }
+
 .price {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.5px;
 }
+
 .change {
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;
 }
+
 .change.up {
   color: #ef4444;
 }
+
 .change.down {
   color: #2563eb;
 }
 
+/* ======================= */
+/*      범위 버튼       */
+/* ======================= */
 .range-buttons {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
+
 .range-btn {
-  padding: 4px 10px;
+  padding: 6px 12px;
   font-size: 12px;
-  border-radius: 999px;
-  border: 1px solid #d1d5db;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
   background: white;
+  color: #6b7280;
   cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
+
+.range-btn:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+  color: #4b5563;
+}
+
 .range-btn.active {
   background: #2563eb;
   color: white;
   border-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
 }
 
+/* ======================= */
+/*      차트 섹션      */
+/* ======================= */
 .chart-section {
-  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
+
 .chart-title {
-  font-size: 13px;
-  color: #6b7280;
-  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  letter-spacing: -0.2px;
 }
+
 .line-chart {
   width: 100%;
   height: 160px;
   background: #f9fafb;
-  border-radius: 10px;
-  padding: 8px;
+  border-radius: 12px;
+  padding: 12px;
+  box-sizing: border-box;
 }
+
 .chart-x-axis {
   display: flex;
   justify-content: space-between;
-  margin-top: 4px;
-  font-size: 11px;
+  font-size: 12px;
   color: #9ca3af;
+  padding: 0 4px;
 }
+
 .bars {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: flex-end;
-  height: 90px;
+  height: 100px;
+  padding: 0 4px;
 }
+
 .bar-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 6px;
 }
+
 .bar {
-  width: 80%;
+  width: 100%;
   border-radius: 4px;
-  background: #e5e7eb;
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  transition: opacity 0.2s ease;
+  min-height: 2px;
 }
+
+.bar:hover {
+  opacity: 0.8;
+}
+
 .bar-label {
-  margin-top: 4px;
   font-size: 11px;
   color: #9ca3af;
+  font-weight: 500;
+}
+
+/* ======================= */
+/*      반응형         */
+/* ======================= */
+@media (max-width: 768px) {
+  .detail-card {
+    padding: 20px;
+    gap: 20px;
+  }
+
+  .detail-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .range-buttons {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .name {
+    font-size: 16px;
+  }
+
+  .price {
+    font-size: 22px;
+  }
+
+  .line-chart {
+    height: 140px;
+  }
+
+  .bars {
+    height: 80px;
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-card {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .name {
+    font-size: 15px;
+  }
+
+  .price {
+    font-size: 20px;
+  }
+
+  .change {
+    font-size: 12px;
+  }
+
+  .chart-title {
+    font-size: 13px;
+  }
+
+  .line-chart {
+    height: 120px;
+  }
+
+  .bars {
+    height: 70px;
+    gap: 4px;
+  }
+
+  .range-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
 }
 </style>

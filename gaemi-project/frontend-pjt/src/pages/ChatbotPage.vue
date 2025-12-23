@@ -1,15 +1,17 @@
 <template>
   <div class="chatbot-page">
-    <!-- 헤더 -->
-    <header class="page-header">
-      <h1>AI 챗봇</h1>
-      <p class="desc">RAG 기반 주식·뉴스 분석</p>
-    </header>
+    <div class="chat-container">
+      <header class="page-header">
+        <div class="header-content">
+          <h1 class="page-title">gAemI-AI 챗봇</h1>
+          <p class="page-desc">궁금한 종목이나 시장 상황을 물어보세요</p>
+        </div>
+      </header>
 
-    <!-- 채팅 영역 -->
-    <section class="chat-area">
-      <AiChatWidget />
-    </section>
+      <section class="chat-area">
+        <AiChatWidget />
+      </section>
+    </div>
   </div>
 </template>
 
@@ -19,31 +21,52 @@ import AiChatWidget from "@/components/chat/AiChatWidget.vue";
 
 <style scoped>
 .chatbot-page {
-  height: calc(100vh - 88px); /* 상단 헤더 높이 제외 */
+  /* 화면 전체 높이에서 헤더 높이만큼 뺌 */
+  height: calc(100vh - 60px); 
+  background: #f9fafb;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
-/* 페이지 상단 */
+.chat-container {
+  width: 100%;
+  max-width: 800px; /* 너무 넓어지지 않게 제한 */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+/* 헤더 */
 .page-header {
-  padding: 12px 0 16px;
+  text-align: center;
+  margin-bottom: 8px;
 }
 
-.page-header h1 {
-  font-size: 20px;
+.page-title {
+  font-size: 24px;
   font-weight: 700;
+  color: #191f28;
+  margin: 0 0 8px 0;
 }
 
-.page-header .desc {
-  font-size: 13px;
-  color: #6b7280;
+.page-desc {
+  font-size: 15px;
+  color: #8b95a1;
+  margin: 0;
 }
 
-/* 🔥 채팅 영역이 화면을 채우게 만드는 핵심 */
+/* 채팅 영역 */
 .chat-area {
-  flex: 1;                 /* 남은 높이 전부 차지 */
+  flex: 1;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e8eb;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-height: 0;           /* overflow 필수 */
 }
 </style>
