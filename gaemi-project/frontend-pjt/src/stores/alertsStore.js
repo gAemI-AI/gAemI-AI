@@ -31,13 +31,20 @@ export const useAlertsStore = defineStore("alerts", {
       this.isLoading = true;
       this.error = null;
       try {
-        // GET /alerts/ -> 유저 토큰에 맞는 알림 목록 반환 가정
-        const res = await api.get("/alerts/");
-        this.alerts = res.data;
+        // GET /api/v1/notifications/rules/
+        const res = await api.get("/notifications/rules/");
+        // 서버 응답을 프론트 형식으로 변환
+        this.alerts = (res.data || []).map(rule => ({
+          id: rule.rule_id,
+          stockCode: rule.stock_details?.stock_id || rule.stock,
+          stockName: rule.stock_details?.stock_name || '',
+          condition: 'gte', // 서버 데이터로부터 역계산 (현재는 기본값)
+          target: rule.target_value,
+          enabled: rule.is_active,
+        }));
       } catch (e) {
         console.error("알림 목록 로드 실패:", e);
         this.error = "알림을 불러오지 못했습니다.";
-        // 에러 시 빈 배열 유지
         this.alerts = [];
       } finally {
         this.isLoading = false;
@@ -48,31 +55,45 @@ export const useAlertsStore = defineStore("alerts", {
        알림 추가 (API)
     -------------------------------------------------- */
     async addAlert(payload) {
-      // payload: { stockCode, stockName, condition, target }
-      // 프론트에서 먼저 보여주기 (Optimistic Update)
+      // payload: { stockCode, stockName, condition, target, metric_type, operator, target_value }
       const tempId = Date.now();
-      const newAlert = { ...payload, id: tempId, enabled: true };
+      const newAlert = { 
+        id: tempId, 
+        stockCode: payload.stockCode,
+        stockName: payload.stockName,
+        enabled: true,
+        condition: payload.condition,
+        target: payload.target,
+      };
       this.alerts.push(newAlert);
 
       try {
-        // POST /alerts/
-        const res = await api.post("/alerts/", {
-          stock_code: payload.stockCode, // 백엔드 필드명에 맞게 조정 필요 (snake_case 가정)
-          stock_name: payload.stockName,
-          condition: payload.condition,
-          target_price: payload.target,
+        // POST /api/v1/notifications/rules/
+        const res = await api.post("/notifications/rules/", {
+          stock: payload.stockCode,
+          metric_type: payload.metric_type,
+          operator: payload.operator,
+          target_value: payload.target_value,
         });
         
-        // 성공 시 실제 ID로 교체 (또는 목록 다시 불러오기)
+        // 성공 시 실제 서버 응답 데이터로 교체
         const index = this.alerts.findIndex(a => a.id === tempId);
         if (index !== -1) {
-          this.alerts[index] = res.data; // 서버가 준 데이터(id 포함)로 교체
+          this.alerts[index] = {
+            id: res.data.rule_id,
+            stockCode: payload.stockCode,
+            stockName: payload.stockName,
+            condition: payload.condition,
+            target: payload.target,
+            enabled: res.data.is_active,
+          };
         }
+        return res.data;
       } catch (e) {
-        console.error("알림 추가 실패:", e);
+        console.error("알림 추가 실패:", e.response?.data || e.message);
         // 실패 시 롤백
         this.alerts = this.alerts.filter(a => a.id !== tempId);
-        alert("알림 추가에 실패했습니다.");
+        throw new Error(e.response?.data?.detail || e.response?.data?.[0] || "알림을 추가할 수 없습니다.");
       }
     },
 
@@ -85,11 +106,11 @@ export const useAlertsStore = defineStore("alerts", {
       this.alerts = this.alerts.filter((a) => a.id !== id);
 
       try {
-        await api.delete(`/alerts/${id}/`);
+        await api.delete(`/notifications/rules/${id}/`);
       } catch (e) {
         console.error("알림 삭제 실패:", e);
         this.alerts = backup; // 실패 시 복구
-        alert("알림 삭제에 실패했습니다.");
+        throw new Error(e.response?.data?.detail || "알림을 삭제할 수 없습니다.");
       }
     },
 
@@ -103,16 +124,12 @@ export const useAlertsStore = defineStore("alerts", {
       // 프론트 삭제
       this.alerts = this.alerts.filter(a => a.stockCode !== stockCode);
 
-      // 백엔드 삭제 요청 (일괄 삭제 API가 없으면 반복문으로 처리)
+      // 백엔드 삭제 요청
       try {
-        // 방법 1: 일괄 삭제 API가 있다면
-        // await api.delete(`/alerts/stock/${stockCode}/`);
-        
-        // 방법 2: 개별 삭제 반복 (임시)
-        await Promise.all(targets.map(t => api.delete(`/alerts/${t.id}/`)));
+        await Promise.all(targets.map(t => api.delete(`/notifications/rules/${t.id}/`)));
       } catch (e) {
         console.error("종목 관련 알림 삭제 실패:", e);
-        // 복구 로직은 복잡하므로 생략하거나, 다시 fetch
+        // 복구
         this.fetchAlerts();
       }
     },
@@ -125,11 +142,9 @@ export const useAlertsStore = defineStore("alerts", {
       if (!alert) return;
 
       const oldValue = alert.enabled;
-      // 프론트 반영
-      // (AlertList.vue의 v-model로 이미 값이 변했을 수 있으므로 여기선 API 호출만 집중)
       
       try {
-        await api.patch(`/alerts/${id}/`, { enabled: alert.enabled });
+        await api.patch(`/notifications/rules/${id}/`, { is_active: alert.enabled });
       } catch (e) {
         console.error("알림 토글 실패:", e);
         alert.enabled = oldValue; // 실패 시 원상복구

@@ -224,11 +224,13 @@ onUnmounted(() => {
 });
 
 function submit() {
-  if (!form.stock || !form.target) return;
+  if (!form.stock || !form.target) {
+    // 검증 오류는 토스트로 표시 (AlertSettingsPage에서 처리)
+    return;
+  }
   emit('create', { ...form });
   
   form.target = null;
-  alert("알림이 등록되었습니다! 🔔");
 }
 </script>
 

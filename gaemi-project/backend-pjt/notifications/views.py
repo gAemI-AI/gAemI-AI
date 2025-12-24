@@ -20,11 +20,11 @@ class NotificationRuleListCreateView(generics.ListCreateAPIView):
         serializer.save(user=self.request.user)
 
     
-# 2. 알림 규칙 삭제(Delete) - rule_id 기준
-class NotificationRuleDestroyView(generics.DestroyAPIView):
+# 2. 알림 규칙 수정(PATCH) & 삭제(DELETE)
+class NotificationRuleUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = NotificationRuleSerializer
     permission_classes = [IsAuthenticated]
-    lookup_field = 'rule_id' # URL에서 rule_id 찾음
+    lookup_field = 'rule_id'
 
     def get_queryset(self):
         return NotificationRule.objects.filter(user=self.request.user)

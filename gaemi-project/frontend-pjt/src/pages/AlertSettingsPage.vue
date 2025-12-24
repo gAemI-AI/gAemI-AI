@@ -87,12 +87,14 @@ import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useFavoritesStore } from "@/stores/favoritesStore.js";
 import { useAlertsStore } from "@/stores/alertsStore.js";
+import { useToastStore } from "@/stores/toastStore.js";
 import AlertForm from "@/components/alerts/AlertForm.vue";
 import AlertList from "@/components/alerts/AlertList.vue";
 
 const route = useRoute();
 const store = useFavoritesStore();
 const alertsStore = useAlertsStore();
+const toastStore = useToastStore();
 const targetStockCode = ref(""); 
 
 /* --------------------------------------------------
@@ -141,14 +143,43 @@ function closeDeleteModal() {
 
 // 진짜 삭제 실행
 function confirmDelete() {
-  if (deleteTargetType.value === 'favorite') {
-    // 관심 종목 + 관련 알림 모두 삭제
-    alertsStore.removeByStockCode(deleteTargetId.value);
-    store.removeFavorite(deleteTargetId.value);
-  } else if (deleteTargetType.value === 'alert') {
-    // 특정 알림 1개만 삭제
-    alertsStore.removeAlert(deleteTargetId.value);
+  try {
+    if (deleteTargetType.value === 'favorite') {
+      // 관심 종목 + 관련 알림 모두 삭제
+      const favoriteStock = favoriteStocks.value.find(s => s.code === deleteTargetId.value);
+      alertsStore.removeByStockCode(deleteTargetId.value);
+      store.removeFavorite(deleteTargetId.value);
+
+      // ✅ 성공 토스트
+      toastStore.add({
+        type: "success",
+        title: "관심종목 삭제됨",
+        message: `${favoriteStock?.name || deleteTargetId.value}이(가) 관심종목에서 제거되었습니다.`,
+        duration: 3000,
+      });
+    } else if (deleteTargetType.value === 'alert') {
+      // 특정 알림 1개만 삭제
+      const alert = alerts.value.find(a => a.id === deleteTargetId.value);
+      alertsStore.removeAlert(deleteTargetId.value);
+
+      // ✅ 성공 토스트
+      toastStore.add({
+        type: "success",
+        title: "알림 삭제됨",
+        message: `${alert?.stockName} 알림이 삭제되었습니다.`,
+        duration: 3000,
+      });
+    }
+  } catch (error) {
+    // ❌ 오류 토스트
+    toastStore.add({
+      type: "error",
+      title: "삭제 실패",
+      message: error.message || "항목을 삭제할 수 없습니다.",
+      duration: 4000,
+    });
   }
+
   closeDeleteModal();
 }
 
@@ -208,13 +239,46 @@ function toggleAlert(item) {
 }
 
 function addAlert(alert) {
-  const stockObj = favoriteStocks.value.find(s => s.code === alert.stock);
-  alertsStore.addAlert({
-    stockCode: alert.stock,
-    stockName: stockObj?.name || alert.stock,
-    condition: alert.condition,
-    target: alert.target,
-  });
+  try {
+    const stockObj = favoriteStocks.value.find(s => s.code === alert.stock);
+    
+    // 조건 매핑: 프론트 조건 -> 백엔드 형식 (metric_type, operator, target_value)
+    const conditionMap = {
+      gte: { metric_type: 'price', operator: '>=', target_value: alert.target.toString() },
+      lte: { metric_type: 'price', operator: '<=', target_value: alert.target.toString() },
+      changeUp: { metric_type: 'change_rate', operator: '>=', target_value: alert.target.toString() },
+      changeDown: { metric_type: 'change_rate', operator: '<=', target_value: (-alert.target).toString() },
+    };
+    
+    const conditionData = conditionMap[alert.condition] || conditionMap.gte;
+    
+    alertsStore.addAlert({
+      stockCode: alert.stock,
+      stockName: stockObj?.name || alert.stock,
+      condition: alert.condition,
+      target: alert.target,
+      // 백엔드 필드
+      metric_type: conditionData.metric_type,
+      operator: conditionData.operator,
+      target_value: conditionData.target_value,
+    });
+    
+    // ✅ 성공 토스트 표시
+    toastStore.add({
+      type: "success",
+      title: "알림 추가됨",
+      message: `${stockObj?.name || alert.stock}의 가격 알림이 설정되었습니다.`,
+      duration: 3000,
+    });
+  } catch (error) {
+    // ❌ 오류 토스트 표시
+    toastStore.add({
+      type: "error",
+      title: "알림 추가 실패",
+      message: error.message || "알림을 추가할 수 없습니다.",
+      duration: 4000,
+    });
+  }
 }
 </script>
 
