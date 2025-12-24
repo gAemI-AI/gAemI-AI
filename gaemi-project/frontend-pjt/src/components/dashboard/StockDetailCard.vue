@@ -67,11 +67,14 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
+import websocketService from '@/services/websocketService';
 
 const props = defineProps({
   stock: { type: Object, required: true },
 });
+
+const emit = defineEmits(['updatePrice']);
 
 const ranges = [
   { label: '1D', value: '1D' },
@@ -82,28 +85,97 @@ const ranges = [
 
 const selectedRange = ref('1W');
 
-// 더미 데이터 (나중에 API 응답으로 교체)
-const xLabels = ['11월 14일', '11월 15일', '11월 16일', '11월 17일', '11월 18일', '11월 19일'];
-const prices = [72000, 71500, 70500, 69800, 71000, 70680];
-const volumes = [900000, 1200000, 800000, 1000000, 1100000, 950000];
+// 차트 데이터 (실시간 업데이트)
+const xLabels = ref(['11월 14일', '11월 15일', '11월 16일', '11월 17일', '11월 18일', '11월 19일']);
+const prices = ref([72000, 71500, 70500, 69800, 71000, 70680]);
+const volumes = ref([900000, 1200000, 800000, 1000000, 1100000, 950000]);
 
-const maxPrice = Math.max(...prices);
-const minPrice = Math.min(...prices);
-const maxVolume = Math.max(...volumes);
+const unsubscribeFunctions = ref([]);
+
+// WebSocket 구독
+const subscribeToStock = async (stockCode) => {
+  try {
+    const unsubscribe = await websocketService.subscribeStock(stockCode, (message) => {
+      if (message.type === 'chart_update') {
+        const { price, rate, timestamp } = message.data;
+        
+        // 가격 업데이트
+        updateChartData(price, rate);
+        
+        // 부모 컴포넌트에 알림
+        emit('updatePrice', { price, rate, timestamp });
+      }
+    });
+    
+    unsubscribeFunctions.value.push(unsubscribe);
+  } catch (err) {
+    console.error(`WebSocket 구독 실패:`, err);
+  }
+};
+
+// 차트 데이터 업데이트
+const updateChartData = (newPrice, newRate) => {
+  // 마지막 가격 제거 후 새 가격 추가 (최대 6개 유지)
+  if (prices.value.length >= 6) {
+    prices.value.shift();
+    xLabels.value.shift();
+    volumes.value.shift();
+  }
+  
+  prices.value.push(newPrice);
+  
+  // 현재 시간 추가 (HHMM 형식)
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  xLabels.value.push(timeStr);
+  
+  // 더미 거래량 추가 (실제로는 백엔드에서 받아야 함)
+  const dummyVolume = Math.floor(Math.random() * 1500000 + 500000);
+  volumes.value.push(dummyVolume);
+};
+
+const maxPrice = computed(() => Math.max(...prices.value));
+const minPrice = computed(() => Math.min(...prices.value));
+const maxVolume = computed(() => Math.max(...volumes.value));
 
 const linePoints = computed(() => {
   const width = 100;
   const height = 40;
-  const stepX = width / (prices.length - 1);
-  const range = maxPrice - minPrice || 1;
+  const stepX = width / (prices.value.length - 1) || 1;
+  const range = maxPrice.value - minPrice.value || 1;
 
-  return prices
+  return prices.value
     .map((p, i) => {
       const x = i * stepX;
-      const y = height - ((p - minPrice) / range) * (height - 4) - 2;
+      const y = height - ((p - minPrice.value) / range) * (height - 4) - 2;
       return `${x},${y}`;
     })
     .join(' ');
+});
+
+onMounted(() => {
+  // stock.code가 있으면 구독 시작
+  if (props.stock?.code) {
+    subscribeToStock(props.stock.code);
+  }
+});
+
+// stock.code 변경 시 구독 업데이트
+watch(() => props.stock?.code, (newCode, oldCode) => {
+  if (newCode && newCode !== oldCode) {
+    // 이전 구독 해제
+    unsubscribeFunctions.value.forEach(unsub => unsub());
+    unsubscribeFunctions.value = [];
+    
+    // 새 종목 구독
+    subscribeToStock(newCode);
+  }
+});
+
+onUnmounted(() => {
+  // 컴포넌트 언마운트 시 모든 구독 해제
+  unsubscribeFunctions.value.forEach(unsub => unsub());
+  unsubscribeFunctions.value = [];
 });
 </script>
 

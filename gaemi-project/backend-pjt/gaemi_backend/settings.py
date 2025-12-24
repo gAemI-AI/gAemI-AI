@@ -129,6 +129,9 @@ ELASTICSEARCH_DSL = {
     },
 }
 
+# Kafka 설정
+KAFKA_BROKER = os.environ.get('KAFKA_BROKER', 'kafka:9092')
+
 #  OpenAI API Key 설정 추가 (GPT 호출용)
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 

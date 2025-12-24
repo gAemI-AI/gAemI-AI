@@ -80,7 +80,7 @@ def load_active_rules():
         if conn: conn.close()
 
 # 알림 결과 저장 함수
-def save_triggered_notification(user_id, stock_name, message):
+def save_triggered_notification(user_id, rule_id, stock_name, message):
     """
     조건이 만족되어 알람이 발생한 경우 그 내역을 DB에 저장
     - 저장이 되어야 프론트엔드 알림함에 뜸
@@ -92,13 +92,16 @@ def save_triggered_notification(user_id, stock_name, message):
     try:
         with conn.cursor() as cursor:
             # INSERT 쿼리: 알림 내역 테이블에 데이터 추가
+            # rule_id를 메시지에 포함시켜서 중복 체크 시 참조 가능하게 함
             query = """
                 INSERT INTO triggered_notifications 
                 (user_id, stock_name, message, is_read, triggered_at)
                 VALUES (%s, %s, %s, FALSE, NOW())
                 RETURNING notification_id
             """
-            cursor.execute(query, (user_id, stock_name, message))
+            # 메시지에 rule_id를 마크처럼 붙임 (check_recent_alert에서 검색할 때 사용)
+            message_with_id = f"{message} [규칙#{rule_id}]"
+            cursor.execute(query, (user_id, stock_name, message_with_id))
 
             # 방금 생성된 ID 받아오기
             notification_id = cursor.fetchone()[0]

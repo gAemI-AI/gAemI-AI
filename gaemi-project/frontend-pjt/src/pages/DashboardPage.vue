@@ -94,7 +94,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, onUnmounted } from "vue";
 import api from "@/api/axios";
 
 /* components */
@@ -107,15 +107,21 @@ import MarketSummaryPanel from "@/components/dashboard/MarketSummaryPanel.vue";
 import StockNewsList from "@/components/dashboard/StockNewsList.vue"; 
 import WeeklyReportList from "@/components/dashboard/WeeklyReportList.vue"; 
 
+/* services */
+import websocketService from "@/services/websocketService";
+
 /* stores */
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useAlertsStore } from "@/stores/alertsStore";
+import { useToastStore } from "@/stores/toastStore";
 
 const store = useFavoritesStore();
 const alertsStore = useAlertsStore();
+const toastStore = useToastStore();
 
 /* 상태 정의 */
 const stocks = ref([]);
+const unsubscribeFunctions = ref([]);
 
 /* 검색 관련 상태 */
 const searchKeyword = ref("");
@@ -140,6 +146,43 @@ watch(
   }
 );
 
+/* WebSocket 알림 구독 */
+const subscribeToNotifications = async () => {
+  // localStorage에서 user 객체 가져오기
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const userId = user?.id;
+  
+  if (!userId) {
+    console.warn("사용자 ID가 없어 알림 구독을 건너뜁니다.");
+    return;
+  }
+
+  try {
+    const unsubscribe = await websocketService.subscribeNotifications(
+      userId,
+      (message) => {
+        if (message.type === 'alert') {
+          // 알림 데이터 처리
+          console.log('받은 알림:', message.data);
+          
+          // 토스트 메시지 표시
+          toastStore.add({
+            type: 'info',
+            title: '📢 알림',
+            message: message.data,
+            duration: 8000,
+          });
+        }
+      }
+    );
+    
+    unsubscribeFunctions.value.push(unsubscribe);
+  } catch (err) {
+    console.error(`알림 구독 실패:`, err);
+  }
+};
+
 /* Lifecycle Hooks */
 onMounted(async () => {
   const hasToken = !!localStorage.getItem("accessToken");
@@ -149,6 +192,9 @@ onMounted(async () => {
       store.fetchWatchlist(),
       alertsStore.fetchAlerts(),
     ]);
+    
+    // WebSocket 알림 구독
+    subscribeToNotifications();
   } else {
     store.loadFromLocal();
   }
@@ -167,6 +213,12 @@ onMounted(async () => {
   } catch (err) {
     console.error("stocks 조회 실패", err);
   }
+});
+
+// 컴포넌트 언마운트 시 모든 WebSocket 구독 해제
+onUnmounted(() => {
+  unsubscribeFunctions.value.forEach(unsub => unsub());
+  unsubscribeFunctions.value = [];
 });
 
 /* Computed Properties */

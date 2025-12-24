@@ -44,12 +44,12 @@ const toastStore = useToastStore();
 /* 컨테이너 */
 .toast-container {
   position: fixed;
-  top: 20px;
+  bottom: 120px;
   right: 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  z-index: 9999;
+  z-index: 99999;
   pointer-events: none;
 }
 

@@ -83,16 +83,22 @@ class NotificationProcessor(MapFunction):
                 
                 # 5. 조건이 만족되었다면 -> 알림 발생
                 if is_triggered:
-                    # 최근 5분(300초) 내에 이미 알림을 보냈는지 확인
+                    # 최근 1분(60초) 내에 이미 알림을 보냈는지 확인
                     if check_recent_alert(rule['rule_id'], ALERT_COOLDOWN_SECONDS):
                         print(f"      쿨타임 중: {rule['stock_name']}")
                         continue
                     
-                    # 알림 메시지 생성
-                    msg = f"[알림] {rule['stock_name']} {op} {target:,.0f}원 도달! (현재: {price:,.0f}원)"
+                    # 알림 메시지 생성 (더 나은 형식)
+                    operator_text = {
+                        '>=': '이상',
+                        '<=': '이하',
+                        '==': '도달'
+                    }.get(op, op)
+                    
+                    msg = f"🚀 {rule['stock_name']} {operator_text} {target:,.0f}원 달성! (현재: {price:,.0f}원)"
                     
                     # 6. DB에 알림 발송 내역 저장 (성공 시 알림 ID 반환)
-                    noti_id = save_triggered_notification(rule['user_id'], rule['stock_name'], msg)
+                    noti_id = save_triggered_notification(rule['user_id'], rule['rule_id'], rule['stock_name'], msg)
                     
                     if noti_id:
                         print(f"    [알림 발송 & DB 저장 완료] ID: {noti_id}")

@@ -36,4 +36,4 @@ BATCH_SIZE_THRESHOLD = 10 # 10개 모이면 처리 (수정 가능)
 
 # 알림 설정
 RULE_RELOAD_INTERVAL_SECONDS = 60  # 1분마다 규칙 재로딩
-ALERT_COOLDOWN_SECONDS = 300  # 5분 쿨타임 (같은 규칙 중복 방지)
+ALERT_COOLDOWN_SECONDS = 60  # 1분 쿨타임 (같은 규칙 중복 방지)
