@@ -49,18 +49,31 @@ class StockChartView(APIView):
     def get(self, request, stock_code):
         # 1. 파라미터 파싱
         search_range = request.query_params.get('range', '1d')   
-        interval = request.query_params.get('interval', '1m')    
+        interval = request.query_params.get('interval', None)    
 
         # 2. 조회 기간 계산 (ISO String 형식으로 변환)
         now = datetime.now()
-        start_time = now - timedelta(days=1) 
         
         if search_range == '1d':
             start_time = now - timedelta(days=1)
+            if interval is None:
+                interval = '1m'  # 1분 단위
         elif search_range == '1w':
             start_time = now - timedelta(weeks=1)
-        elif search_range == '1M':
+            if interval is None:
+                interval = '1d'  # 1일 단위
+        elif search_range == '1m':
             start_time = now - timedelta(days=30)
+            if interval is None:
+                interval = '1d'  # 1일 단위
+        elif search_range == '3m':
+            start_time = now - timedelta(days=90)
+            if interval is None:
+                interval = '1d'  # 1일 단위
+        else:
+            start_time = now - timedelta(days=1)
+            if interval is None:
+                interval = '1m'
             
         #  데이터가 "2025-12-16T..." 문자열이므로, 쿼리도 문자열로
         gte_timestamp = start_time.isoformat() 

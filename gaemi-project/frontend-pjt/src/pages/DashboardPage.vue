@@ -83,7 +83,7 @@
           <h3 class="panel-title">알림 조건 목록</h3>
           <span class="count-badge">{{ alertsStore.alerts.length }}</span>
         </div>
-        <AlertHistoryList :alerts="alertsStore.alertEvents" />
+        <AlertHistoryList :alerts="alertsStore.alerts" />
       </div>
 
       <WeeklyReportList />
@@ -148,7 +148,6 @@ watch(
 
 /* WebSocket 알림 구독 */
 const subscribeToNotifications = async () => {
-  // localStorage에서 user 객체 가져오기
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
   const userId = user?.id;
@@ -163,14 +162,26 @@ const subscribeToNotifications = async () => {
       userId,
       (message) => {
         if (message.type === 'alert') {
-          // 알림 데이터 처리
           console.log('받은 알림:', message.data);
           
+          let msg = message.data; // 예: "🚀 삼성전자 이상 110,000원 달성!..."
+
+          // 🛠️ [수정] "이상 110,000원" 패턴을 찾아서 -> "110,000원 이상"으로 순서 뒤집기
+          // 정규식 설명: (이상|이하) 뒤에 (숫자+콤마+원)이 오면 순서를 바꿈
+          const regex = /(이상|이하)\s+([0-9,]+원)/;
+          const match = msg.match(regex);
+          
+          if (match) {
+            // match[1]: "이상", match[2]: "110,000원"
+            // replace를 이용해 순서 변경
+            msg = msg.replace(regex, `${match[2]} ${match[1]}`);
+          }
+
           // 토스트 메시지 표시
           toastStore.add({
             type: 'info',
             title: '📢 알림',
-            message: message.data,
+            message: msg, // 수정된 메시지 출력
             duration: 8000,
           });
         }

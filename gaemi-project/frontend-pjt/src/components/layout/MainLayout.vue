@@ -187,23 +187,52 @@ const lastToastKey = computed(() => {
   return username ? `last_toast_at_${username}` : null;
 });
 
+/* =========================================
+   기타 로직 (토스트, 알림 등)
+========================================= */
+// ... (showToastsHere, lastToastKey 등 기존 코드 유지) ...
+
+// 🛠️ [수정] 토스트 메시지 생성 함수
 function toastFromEvent(ev) {
+  // 숫자에 콤마 추가
+  const val = Number(ev.target).toLocaleString();
+  let condText = "";
+  let unit = "원";
+
+  // 조건 문구 설정
+  if (ev.condition === "gte" || ev.condition === "PRICE_ABOVE") {
+    condText = "이상";
+  } else if (ev.condition === "lte" || ev.condition === "PRICE_BELOW") {
+    condText = "이하";
+  } else if (ev.condition === "changeUp") {
+    condText = "이상 상승";
+    unit = "%";
+  } else if (ev.condition === "changeDown") {
+    condText = "이상 하락";
+    unit = "%";
+  }
+
   return {
     type: "info",
-    title: "알림 도착",
-    message: `${ev.stockName} · ${ev.target}${ev.condition === "changeUp" || ev.condition === "changeDown" ? "%" : "원"} 조건 충족`,
+    title: "🔔 알림 도착",
+    // 목표: "삼성전자 110,000원 이상 달성!"
+    message: `${ev.stockName} ${val}${unit} ${condText} 달성!`,
   };
 }
 
+// 🛠️ [수정] 알림 드롭다운용 텍스트 포맷
 function formatCondition(condition, target) {
+  const val = Number(target).toLocaleString();
   switch (condition) {
-    case "gte": return `${target}원 이상`;
-    case "lte": return `${target}원 이하`;
-    case "changeUp": return `${target}% 이상 상승`;
-    case "changeDown": return `${target}% 이상 하락`;
+    case "gte": return `${val}원 이상`;
+    case "lte": return `${val}원 이하`;
+    case "changeUp": return `${val}% 이상 급등`;
+    case "changeDown": return `${val}% 이상 급락`;
     default: return "";
   }
 }
+
+// ... (나머지 formatTime, flushUnshownEvents 등은 그대로 유지) ...
 
 function formatTime(iso) {
   const d = new Date(iso);

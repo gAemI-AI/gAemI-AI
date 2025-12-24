@@ -44,7 +44,7 @@
               <input
                 :type="showPw1 ? 'text' : 'password'"
                 v-model="form.password"
-                placeholder="비밀번호 (문자+숫자 6자 이상)"
+                placeholder="비밀번호 (문자+숫자 8자 이상)"
               />
               <button class="icon-btn" @click="showPw1 = !showPw1">
                 <img :src="showPw1 ? eyeClosed : eyeOpen" class="eye-icon" />
@@ -52,7 +52,7 @@
             </div>
 
             <p v-if="passwordStatus === 'invalid'" class="error-msg">
-              ❌ 비밀번호는 문자와 숫자를 포함한 6자 이상이어야 합니다.
+              ❌ 비밀번호는 문자와 숫자를 포함한 8자 이상이어야 합니다.
             </p>
             <p v-if="passwordStatus === 'valid'" class="success-msg">
               ✔ 사용 가능한 비밀번호입니다.
@@ -225,7 +225,7 @@ const passwordStatus = ref(null);
 const passwordMatchStatus = ref(null);
 
 const isValidPassword = (pw) => {
-  if (!pw || pw.length < 6) return false;
+  if (!pw || pw.length < 8) return false;
   return /[A-Za-z]/.test(pw) && /[0-9]/.test(pw);
 };
 
@@ -310,8 +310,8 @@ const onSubmit = async () => {
   if (nicknameStatus.value !== "ok") return alert("닉네임 중복 확인을 완료해주세요.");
 
   const pw = form.value.password;
-  const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
-  if (!pwRegex.test(pw)) return alert("비밀번호는 문자+숫자 포함 6자 이상이어야 합니다.");
+  const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+  if (!pwRegex.test(pw)) return alert("비밀번호는 문자+숫자 포함 8자 이상이어야 합니다.");
 
   if (form.value.password !== form.value.passwordConfirm)
     return alert("비밀번호 확인이 일치하지 않습니다.");
