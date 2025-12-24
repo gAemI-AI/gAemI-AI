@@ -1,4 +1,5 @@
 from rest_framework import generics # ListAPIView: 단순 조회 업무를 위한 자동화된 로봇
+from django.db import models
 from .models import StockMaster
 from .serializers import StockMasterSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -13,6 +14,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from elasticsearch import Elasticsearch
+from rest_framework.permissions import IsAuthenticated
+from .models import WeeklyReport, StockMaster
+from watchlist.models import Watchlist  # Watchlist 모델 임포트 필요 (경로 확인 필요)
+from .serializers import WeeklyReportSerializer
 
 # 주식 목록 조회 전용 뷰 (GET)
 class StockListView(generics.ListAPIView):
@@ -178,8 +183,9 @@ class MarketIndexView(APIView):
             "aggs": {
                 "indices": {
                     # Consumer에서 mapping한 대로 .keyword 필드 사용 필수
+                    # ✅ 수정: index_code는 이미 keyword 타입이므로 .keyword 불필요
                     "terms": { 
-                        "field": "index_code.keyword", 
+                        "field": "index_code",  # ← .keyword 제거
                         "size": 10 # 현재는 3개이지만 확장 대비로 10개
                     },
                     "aggs": {
@@ -230,3 +236,57 @@ class MarketIndexView(APIView):
             print(f"🚨 Market Index Error: {e}")
             # 에러 발생 시 500 대신 빈 배열 반환 (프론트엔드 보호)
             return Response([], status=status.HTTP_200_OK)
+
+
+# 주간 리포트 조회 API
+# - 로그인한 사용자의 관심 종목(Watchlist) 기준으로 필터링됨
+# - URL: GET /api/v1/stocks/reports/weekly/
+class WeeklyReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        로그인한 사용자의 관심 종목(Watchlist)에 대한 주간 리포트 조회
+        """
+        try:
+            from django.db.models import Max
+            from watchlist.models import Watchlist
+            from .models import WeeklyReport
+            from .serializers import WeeklyReportSerializer
+
+            # 1. 로그인한 사용자의 관심 종목 조회
+            interested_stock_ids = Watchlist.objects.filter(
+                user=request.user
+            ).values_list('stock_id', flat=True)
+
+            if not interested_stock_ids:
+                # 관심 종목이 없으면 빈 배열 반환
+                return Response([], status=status.HTTP_200_OK)
+
+            # 2. 가장 최근 리포트 날짜 찾기 (모든 리포트 중 최신 start_date)
+            latest_date = WeeklyReport.objects.aggregate(
+                max_date=Max('start_date')
+            )['max_date']
+
+            if not latest_date:
+                # 생성된 리포트가 없으면 빈 배열 반환
+                return Response([], status=status.HTTP_200_OK)
+
+            # 3. 해당 주의 관심 종목 리포트만 조회
+            reports = WeeklyReport.objects.filter(
+                stock_id__in=interested_stock_ids,
+                start_date=latest_date
+            ).select_related('stock').order_by('-start_date')
+
+            # 4. 직렬화하여 응답
+            serializer = WeeklyReportSerializer(reports, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"❌ Weekly Report Error: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"error": "리포트 조회 실패"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
