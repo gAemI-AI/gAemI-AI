@@ -11,6 +11,9 @@
 
 **[Backend & Frontend]**
 - [WebSocket 기반 실시간 시세 및 알림 파이프라인](https://www.notion.so/WebSocket-2cf0c3d3c9ea8016b0b9f67bd3709bf2?source=copy_link)
+- [[Frontend] 사용자 인증 & 상태 관리 설계](https://www.notion.so/Frontend-2d40c3d3c9ea8011b8b1f5097657441d?source=copy_link)
+- [[Frontend] Backend 통신 아키텍처에 대한 Frontend 수용 및 한계 인지](https://www.notion.so/Frontend-Backend-Frontend-REST-API-WebSocket-2d40c3d3c9ea80eca1eee852073e01b0?source=copy_link)
+- [[Frontend] 실시간 UI 처리 구조 (WebSocket 이벤트 수용)](https://www.notion.so/Frontend-UI-WebSocket-2d40c3d3c9ea805db15aff70fd2a7196?source=copy_link)
 
 **[Infa & Data Governance]**
 - [데이터 거버넌스 및 수명주기 관리 전략](https://www.notion.so/2cf0c3d3c9ea80a1b5e7f533f9b0ce1e?source=copy_link)
@@ -18,6 +21,7 @@
 **[ETC]**
 - [왜 Google RSS를 사용했나요?](https://www.notion.so/Google-RSS-2c00c3d3c9ea803ca500d5374af9cdc1?source=copy_link)
 - [왜 기사 전체 내용을 Embedding 변환하지 않았나요?](https://www.notion.so/Embedding-2c60c3d3c9ea8049b09af74c3625ebe4?source=copy_link)
+- [Frontend 추후 개선 계획](https://www.notion.so/Frontend-2d40c3d3c9ea80fdae5fe9d64070d97a?source=copy_link)
 
 ## 📌 Git 협업 전략
 -
