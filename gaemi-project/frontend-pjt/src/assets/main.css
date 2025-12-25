@@ -1,0 +1,10 @@
+@import './base.css';
+
+/* 전역 레이아웃 망가지는 문제 해결 */
+#app {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: block;
+}

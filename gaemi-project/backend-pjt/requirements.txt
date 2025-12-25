@@ -1,0 +1,23 @@
+django
+djangorestframework
+psycopg2-binary
+django-cors-headers
+djangorestframework-simplejwt
+
+requests>=2.32.3
+cryptography>=43.0.0
+
+django-cors-headers  # 프론트엔드 통신용
+djangorestframework
+elasticsearch-dsl    # ES 통신용 (공식 라이브러리)
+openai               # GPT 호출용
+elasticsearch
+# elasticsearch>=8.0.0
+
+drf-yasg
+
+# WebSocket & Redis 관련
+daphne>=4.0.0          # ASGI 서버
+channels>=4.0.0        # Django Channels
+channels-redis>=4.0.0  # Redis Channel Layer
+kafka-python>=2.0.2    # Kafka 연동

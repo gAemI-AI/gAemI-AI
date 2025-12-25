@@ -1,0 +1,454 @@
+# docker-compose.yml
+
+services:
+  # 1. DB 서비스
+  db:
+    image: postgres:15
+    container_name: gaemi_db
+    restart: always # 죽으면 계속 다시 살림
+    environment:
+      POSTGRES_USER: gaemi
+      POSTGRES_PASSWORD: gaemigaemi11 
+      POSTGRES_DB: gaemi_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/postgres/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./config/postgres/data:/docker-data
+    # 헬스체크: DB가 실제로 접속 가능한 상태인지 검사
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gaemi -d gaemi_ai"]
+      interval: 10s # 10초 간격으로
+      timeout: 5s
+      retries: 5
+
+  # 2. 백엔드 서비스
+  backend:
+    build:
+      context: ./backend-pjt # 해당 폴더 내 Dockerfile로 이미지 빌드
+    container_name: gaemi_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend-pjt:/app # 코드 수정시 재시작 없이 바로 반영되도록 연결
+    environment:
+      - POSTGRES_DB=gaemi_ai
+      - POSTGRES_USER=gaemi
+      - POSTGRES_PASSWORD=gaemigaemi11
+      - POSTGRES_HOST=db
+      - REDIS_HOST=redis  # 추가
+    env_file:
+      - ./backend-pjt/.env
+    depends_on:
+      db:
+        condition: service_healthy # DB 켜짐 + 접속 가능 상태까지 대기 후 실행
+      redis:
+        condition: service_healthy
+  
+  # 3. 프론트엔드 서비스
+  frontend:
+    build:
+      context: ./frontend-pjt
+    container_name: gaemi_front
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend-pjt:/app # 로컬 소스를 컨테이너로 공유
+      - /app/node_modules # (익명 볼륨) 컨테이너 내부 전용 공간: 로컬의 node_modules와 섞이지 않게 컨테이너 전용으로 격리
+      # 격리하지 않을시: npm install때마다 로컬, 컨테이너 node_modules가 깨짐. CI 환경에서 재현 불가
+    working_dir: /app
+    command: ["npm", "run", "dev", "--", "--host"] # 외부 접속 허용하며 실행
+    depends_on:
+      - backend
+  
+  # 4. zookeeper: kafka 브로커 관리 및 조율
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: gaemi_zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+
+  # 5. kafka: 메시지 브로커
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: gaemi_kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # 접속 주소 설정 -> 틀리면 Connection Refused남
+      # - PLAINTEXT: Docker 내부끼리 통신할 때 (kafka:29092)
+      # - PLAINTEXT_HOST: 내 컴퓨터에서 접속할 때 (localhost:9092)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    # kafka는 무거워서 부팅이 느림 -> 그때마다 쌓이는 에러 로그를 막기 위해 설정
+    healthcheck:
+      test: nc -z localhost 9092 || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # 6. Kafka UI
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: gaemi_kafka_ui
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=Gaemi-Cluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=gaemi_kafka:29092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=gaemi_zookeeper:2181
+    depends_on:
+      - kafka
+
+  # 7. 주식 데이터 수집기 (Producer) - 독립 실행
+  producer-stock:
+    build:
+      context: ./data-pjt/producer-stock
+    container_name: gaemi_producer_stock
+    volumes:
+      - ./data-pjt/producer-stock:/app
+    env_file:
+      - ./data-pjt/producer-stock/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      kafka:
+        condition: service_healthy # kafka가 'Healthy'상태가 될 때까지 기다렸다 실행 (DNS 에러 방지)
+    restart: on-failure
+
+  # 8. 뉴스 데이터 수집기
+  producer-news:
+    build:
+      context: ./data-pjt/producer-news
+    container_name: gaemi_producer_news
+    volumes:
+      - ./data-pjt/producer-news:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - kafka
+    restart: on-failure
+
+  # 9. Flink JobManager: 토픽 자동 생성만 수행 (매니저 역할)
+  flink-jobmanager:
+    build:
+      context: ./data-pjt/flink
+      dockerfile: Dockerfile-flink
+    image: gaemi-flink-jobmanager:1.18
+    platform: linux/amd64
+    container_name: gaemi_flink_jobmanager
+    ports:
+      - "8081:8081"
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+      - PYTHONPATH=/opt/flink/usrlib/jobs
+    depends_on:
+      kafka:
+        condition: service_started
+      db:
+        condition: service_healthy
+    volumes:
+      - ./data-pjt/flink-jobs:/opt/flink/usrlib/jobs
+      - ./data-pjt/flink/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar
+      - ./data-pjt/flink/kafka-clients-3.5.1.jar:/opt/flink/lib/kafka-clients-3.5.1.jar
+    env_file:
+      - ./data-pjt/flink-jobs/.env
+    # 컨테이너가 켜진 뒤 실행할 명령어를 자동 생성
+    # 1. pip install: 필요한 라이브러리 설치
+    # 2. setup_kafka.py: 토픽(stock-ticks 등)이 없으면 만들고 올 때까지 대기
+    # 3. jobmanager: 모든 준비가 끝나면 Flink 실행
+    command: >
+      bash -c "
+        echo '[job-manager] Kafka 라이브러리 설치...' &&
+        pip install kafka-python && 
+        echo '[job-manager] 토픽 생성 스크립트 실행...' &&
+        python /opt/flink/usrlib/jobs/setup_kafka.py &&
+        echo '===토픽 자동 생성 완료 JobManager 시작===' &&
+        /docker-entrypoint.sh jobmanager
+      "
+
+  # 10. Flink TaskManager: JobManager가 시키는 Filtering, Mapping 등 실제 수행
+  flink-taskmanager:
+    build:
+      context: ./data-pjt/flink
+      dockerfile: Dockerfile-flink
+    platform: linux/amd64
+    image: gaemi-flink-taskmanager:1.18
+    container_name: gaemi_flink_taskmanager
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager # jobManager 명시
+      - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=4 # 동시에 처리할 작업 수
+      - PYTHONPATH=/opt/flink/usrlib/jobs
+    depends_on:
+      - flink-jobmanager
+    volumes:
+      - ./data-pjt/flink-jobs:/opt/flink/usrlib/jobs
+      - ./data-pjt/flink/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar
+      - ./data-pjt/flink/kafka-clients-3.5.1.jar:/opt/flink/lib/kafka-clients-3.5.1.jar
+    env_file:
+      - ./data-pjt/flink-jobs/.env
+  
+  # 11. Job 자동 제출기: job 등록 자동화
+  flink-job-submitter:
+    image: gaemi-flink-jobmanager:1.18
+    platform: linux/amd64
+    container_name: gaemi_job_submitter
+    depends_on:
+      flink-jobmanager:
+        condition: service_started
+      flink-taskmanager:
+        condition: service_started
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    env_file:
+      - ./data-pjt/flink-jobs/.env
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    volumes:
+      - ./data-pjt/flink-jobs:/opt/flink/usrlib/jobs
+      - ./data-pjt/flink/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar
+      - ./data-pjt/flink/kafka-clients-3.5.1.jar:/opt/flink/lib/kafka-clients-3.5.1.jar
+    command: >
+      /bin/sh -c "
+        echo '🔄 Flink 클러스터 부팅 대기 (60초)...' &&
+        sleep 60 &&
+        
+        echo '📡 JobManager 연결 테스트...' &&
+        /opt/flink/bin/flink list -m flink-jobmanager:8081 || exit 1 &&
+        echo '✅ JobManager 응답 확인' &&
+        
+        echo '[Submit] 1️⃣ 실시간 알림 Job 제출...' &&
+        /opt/flink/bin/flink run -m flink-jobmanager:8081 -d -py /opt/flink/usrlib/jobs/notification_processor.py || echo '❌ Job 1 제출 실패' &&
+        sleep 5 &&
+        
+        echo '[Submit] 2️⃣ 뉴스 AI 분석 Job 제출...' &&
+        /opt/flink/bin/flink run -m flink-jobmanager:8081 -d -py /opt/flink/usrlib/jobs/news_ai_analysis.py || echo '❌ Job 2 제출 실패' &&
+        sleep 5 &&
+
+        echo '[Submit] 3️⃣ raw stock 정보 Job 제출...' &&
+        /opt/flink/bin/flink run -m flink-jobmanager:8081 -d -py /opt/flink/usrlib/jobs/stock_raw_ingest.py || echo '❌ Job 3 제출 실패' &&
+        sleep 5 &&
+        
+        echo '✅ 모든 Job 제출 완료!' &&
+        /opt/flink/bin/flink list -m flink-jobmanager:8081
+      "
+    restart: "no"
+
+  # 12. Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: gaemi_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+  # 13. Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.1
+    container_name: gaemi_kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+  # 14. 시간 장소 Consumer (Kafka -> ES)
+  consumer-index:
+    build:
+      context: ./data-pjt/consumer-index
+    container_name: gaemi_consumer_index
+    environment:
+      - KAFKA_BROKER=kafka:29092
+      - TOPIC_NAME=index-ticks
+      - ES_HOST=http://elasticsearch:9200
+      - ES_INDEX=index-ticks
+    depends_on:
+      kafka:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+    restart: on-failure
+
+  # 15. Redis (Django Channels Layer용)
+  redis:
+    image: redis:7-alpine
+    container_name: gaemi_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 16. Kafka-WebSocket Bridge Worker (Kafka에서 메시지를 받아서 WebSocket 그룹으로 쏘아주는 역할)
+  backend-worker:
+    build:
+      context: ./backend-pjt
+    container_name: gaemi_backend_worker
+    volumes:
+      - ./backend-pjt:/app
+    environment:
+      - PYTHONUNBUFFERED=1  
+      - POSTGRES_DB=gaemi_ai
+      - POSTGRES_USER=gaemi
+      - POSTGRES_PASSWORD=gaemigaemi11
+      - POSTGRES_HOST=db
+      - REDIS_HOST=redis
+    env_file:
+      - ./backend-pjt/.env
+    # 커스텀 커맨드 실행
+    command: python manage.py run_kafka_bridge
+    depends_on:
+      - backend
+      - kafka
+      - redis
+    restart: on-failure
+
+  # 17. Spark Master (Cluster Manager)
+  spark-master:
+    build: 
+      context: ./data-pjt/spark
+    container_name: gaemi_spark_master
+    environment:
+      - SPARK_NO_DAEMONIZE=true # 컨테이너가 백그라운드에서 죽지 않게 설정
+    ports:
+      - "9090:8080" # 내부(8080) -> 외부(9090) 매핑
+      - "7077:7077" # Spark Master URL
+    volumes:
+      - ./data-pjt/spark/jobs:/opt/spark/jobs
+    # 마스터 실행 명령어를 직접 지정
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    depends_on:
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+
+  # 18. Spark Worker (Actual Computer)
+  spark-worker:
+    build: 
+      context: ./data-pjt/spark
+    container_name: gaemi_spark_worker
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1G
+    ports:
+      - "9091:8081" # 내부(8081) -> 외부(9091) 매핑
+    volumes:
+      - ./data-pjt/spark/jobs:/opt/spark/jobs
+    depends_on:
+      - spark-master
+    # 워커 실행 명령어 (마스터 주소 명시)
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+
+  # [Infra] 1. Hadoop Namenode (HDFS 메인)
+  hdfs:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: gaemi_namenode
+    platform: linux/amd64
+    ports:
+      - "9870:9870" # Web UI 포트
+      - "9000:9000" # RPC 포트
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://hdfs:9000
+      - HDFS_CONF_dfs_replication=1
+      - HDFS_CONF_dfs_permissions_enabled=false # 권한 체크 끄기 (개발용)
+
+  # [Infra] 1-2. Hadoop Datanode (실제 데이터 저장소)
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: gaemi_datanode
+    platform: linux/amd64
+    depends_on:
+      - hdfs
+    environment:
+      - SERVICE_PRECONDITION=hdfs:9870
+      - CORE_CONF_fs_defaultFS=hdfs://hdfs:9000
+      - HDFS_CONF_dfs_replication=1
+      - HDFS_CONF_dfs_permissions_enabled=false
+      
+  # [Infra] 2. Airflow DB (Metadata 저장소)
+  airflow-db:
+    image: postgres:13
+    container_name: gaemi_airflow_db
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - airflow_db_data:/var/lib/postgresql/data
+
+  # [Infra] 3. Airflow Webserver & Scheduler
+  airflow:
+    # image: apache/airflow:2.7.1
+    build:
+      context: ./data-pjt/airflow
+      dockerfile: Dockerfile # 내가 만든 Dockerfile로 빌드
+    container_name: gaemi_airflow
+    user: "${AIRFLOW_UID:-50000}:0"
+    depends_on:
+      - airflow-db
+      - hdfs
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - AIRFLOW__CORE__FERNET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False # 예제 DAG 끄기
+      - _AIRFLOW_DB_UPGRADE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=admin
+      - _AIRFLOW_WWW_USER_PASSWORD=admin
+      # 커스텀 환경변수 추가
+      - GAEMI_DB_HOST=db
+      - GAEMI_DB_NAME=gaemi_ai
+      - GAEMI_DB_USER=gaemi
+      - GAEMI_DB_PASSWORD=gaemigaemi11
+      - GAEMI_HDFS_URL=http://gaemi_namenode:9870 
+      - GAEMI_HDFS_USER=root
+      - GAEMI_ES_HOST=http://elasticsearch:9200
+    volumes:
+      - ./data-pjt/airflow/dags:/opt/airflow/dags # DAG 파일 연동
+      - ./data-pjt/airflow/logs:/opt/airflow/logs
+      - ./data-pjt/airflow/plugins:/opt/airflow/plugins
+    ports:
+      - "8082:8080" # 8080 포트는 겹침 -> 8082로 변경
+    # 시작 시 DB 마이그레이션 + 관리자 계정 생성 + 웹서버/스케줄러 실행
+    command: bash -c "airflow db migrate && airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin || true && airflow webserver & airflow scheduler"
+
+
+# 볼륨 정의: 컨테이너가 꺼져도 사라지지 않는 외장하드
+volumes:
+  postgres_data: # DB 데이터 저장
+  zookeeper_data:
+  kafka_data: # Kafka 메시지 저장
+  esdata: # 검색 엔진 데이터 저장
+  airflow_db_data: # airflow 데이터 저장
