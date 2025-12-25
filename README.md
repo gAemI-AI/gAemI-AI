@@ -43,13 +43,13 @@
 
 | Category | Technologies |
 | :--- | :--- |
-| **Frontend** | Vue.js 3, Pinia, Axios, Chart.js, SCSS |
-| **Backend** | Django REST Framework, Gunicorn |
+| **Frontend** | Vue.js, Axios, Chart.js|
+| **Backend** | Django REST Framework |
 | **Data Ingestion** | Apache Kafka, Zookeeper, Python Crawlers |
 | **Stream Processing** | Apache Flink, Elasticsearch (Vector Store) |
 | **Batch Processing** | Apache Spark, Hadoop (HDFS), Airflow (Scheduling) |
 | **Database & Cache** | PostgreSQL, Redis |
-| **AI & ML** | OpenAI API (GPT-4), LangChain |
+| **AI ** | OpenAI API |
 | **DevOps** | Docker, Docker Compose, Nginx |
 
 
