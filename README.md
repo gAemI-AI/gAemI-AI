@@ -16,7 +16,7 @@
 **gAemI-AI**는 초단위로 쏟아지는 주가 데이터와 뉴스 데이터를 실시간으로 수집·분석하여 사용자에게 **AI 요약 뉴스**와 **주간 투자 리포트** 그리고 **신뢰할 수 있는 AI 챗봇 답변**을 제공하는 서비스입니다.
 
 ### 🎯 기획 의도 및 해결 과제
-* **데이터의 시각화 및 인사이트:** 단순한 차트 나열을 넘어, **Apache Spark**로 분석한 대용량 데이터를 **GenAI(LLM)**가 알기 쉬운 문장으로 풀어 설명합니다.
+* **데이터의 시각화 및 인사이트:** 단순한 차트 나열을 넘어, **Apache Spark**로 분석한 대용량 데이터를 **GenAI(LLM)** 가 알기 쉬운 문장으로 풀어 설명합니다.
 * **시간이 부족한 개미 중 개미들을 위한 서비스**: 장기 투자를 목적으로 안정 주식을 **특정 가격**에 구매할 수 있도록 사용자 지정 조건에 맞춰 능동형 알람을 제공합니다.
 * **확장 가능한 아키텍처:** 실시간 처리(Real-time)와 배치 처리(Batch)가 결합된 **Lambda Architecture**를 구축하여 대용량 트래픽에 대응했습니다.
 * **도메인 특화 AI 챗봇**: 일반적 대답을 잘하는 General 모델에 증권이라는 도메인에 특화될 수 있도록 RAG(Retrieval-Augmented Generation) AI 챗봇을 제공합니다.
@@ -49,7 +49,7 @@
 | **Stream Processing** | Apache Flink, Elasticsearch (Vector Store) |
 | **Batch Processing** | Apache Spark, Hadoop (HDFS), Airflow (Scheduling) |
 | **Database & Cache** | PostgreSQL, Redis |
-| **AI ** | OpenAI API |
+| **AI** | OpenAI API |
 | **DevOps** | Docker, Docker Compose, Nginx |
 
 
